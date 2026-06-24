@@ -1,0 +1,46 @@
+{
+  "name": "@kamod-ch/signals",
+  "version": "0.1.0",
+  "description": "Persisted Preact signals with localStorage, sessionStorage, cookie, and memory drivers.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Klaus Zahiragic <watzak>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kamod-ch/kamod-signals.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "@preact/signals": "^2.0.0",
+    "preact": "^10.0.0"
+  },
+  "devDependencies": {
+    "@preact/signals": "^2.9.1",
+    "@types/node": "^24.3.0",
+    "jsdom": "^26.1.0",
+    "preact": "^10.27.2",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2",
+    "vitest": "^4.0.3"
+  }
+}
