@@ -1,6 +1,121 @@
 import { createCookieContext } from "./drivers";
 import { __private__, persistedSignal } from "./persistedSignal";
 
+const installIndexedDbPolyfill = () => {
+  if (typeof indexedDB !== "undefined") {
+    return;
+  }
+
+  type StoreMap = Map<string, unknown>;
+  type DatabaseState = { version: number; stores: Map<string, StoreMap> };
+  const databases = new Map<string, DatabaseState>();
+
+  const createRequest = <T>() => ({
+    result: undefined as T,
+    error: null as DOMException | null,
+    onsuccess: null as ((event: Event) => void) | null,
+    onerror: null as ((event: Event) => void) | null,
+    onupgradeneeded: null as ((event: Event) => void) | null,
+    onblocked: null as ((event: Event) => void) | null,
+  });
+
+  const createDatabase = (name: string, stores: Map<string, StoreMap>) => ({
+    name,
+    objectStoreNames: {
+      contains(storeName: string) {
+        return stores.has(storeName);
+      },
+    },
+    createObjectStore(storeName: string) {
+      const store = new Map<string, unknown>();
+      stores.set(storeName, store);
+      return store as unknown as IDBObjectStore;
+    },
+    transaction(storeName: string) {
+      const store = stores.get(storeName);
+      if (!store) {
+        throw new Error(`Missing object store: ${storeName}`);
+      }
+
+      return {
+        objectStore() {
+          return {
+            get(key: string) {
+              const request = createRequest<unknown>();
+              queueMicrotask(() => {
+                request.result = store.get(key);
+                request.onsuccess?.(new Event("success"));
+              });
+              return request as unknown as IDBRequest<unknown>;
+            },
+            put(value: unknown, key: string) {
+              const request = createRequest<unknown>();
+              queueMicrotask(() => {
+                store.set(key, value);
+                request.result = value;
+                request.onsuccess?.(new Event("success"));
+              });
+              return request as unknown as IDBRequest<unknown>;
+            },
+            delete(key: string) {
+              const request = createRequest<undefined>();
+              queueMicrotask(() => {
+                store.delete(key);
+                request.result = undefined;
+                request.onsuccess?.(new Event("success"));
+              });
+              return request as unknown as IDBRequest<undefined>;
+            },
+          } as IDBObjectStore;
+        },
+      } as unknown as IDBTransaction;
+    },
+    close() {},
+    onversionchange: null as ((this: IDBDatabase, event: Event) => void) | null,
+  });
+
+  Object.defineProperty(globalThis, "indexedDB", {
+    configurable: true,
+    value: {
+      open(name: string, version?: number) {
+        const request = createRequest<IDBDatabase>();
+
+        queueMicrotask(() => {
+          const current = databases.get(name);
+          const nextVersion = version ?? current?.version ?? 1;
+          const needsUpgrade = !current || nextVersion > current.version;
+          const state = current ?? { version: nextVersion, stores: new Map<string, StoreMap>() };
+
+          if (needsUpgrade) {
+            state.version = nextVersion;
+          }
+
+          databases.set(name, state);
+          const db = createDatabase(name, state.stores) as unknown as IDBDatabase;
+          request.result = db;
+          if (needsUpgrade) {
+            request.onupgradeneeded?.(new Event("upgradeneeded"));
+          }
+          request.onsuccess?.(new Event("success"));
+        });
+
+        return request as unknown as IDBOpenDBRequest;
+      },
+      deleteDatabase(name: string) {
+        const request = createRequest<undefined>();
+        queueMicrotask(() => {
+          databases.delete(name);
+          request.result = undefined;
+          request.onsuccess?.(new Event("success"));
+        });
+        return request as unknown as IDBOpenDBRequest;
+      },
+    },
+  });
+};
+
+installIndexedDbPolyfill();
+
 describe("persistedSignal", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -94,5 +209,51 @@ describe("persistedSignal", () => {
 
     expect(first.value).toBe("dark");
     expect(second.value).toBe("light");
+  });
+
+  it("hydrates from indexeddb asynchronously", async () => {
+    const database = `signals-test-${Date.now()}-hydrate`;
+    const seeded = __private__.createController("theme", "light", {
+      storage: "indexeddb",
+      indexedDB: { database },
+    });
+
+    seeded.signal.value = "dark";
+    await vi.waitFor(async () => {
+      await expect(
+        __private__.drivers.indexeddb.get("theme", {
+          storage: "indexeddb",
+          indexedDB: { database },
+        }),
+      ).resolves.toBe('"dark"');
+    });
+    seeded.dispose();
+    __private__.globalRegistry.clear();
+
+    const theme = persistedSignal("theme", "light", {
+      storage: "indexeddb",
+      indexedDB: { database },
+    });
+
+    expect(theme.value).toBe("light");
+    await vi.waitFor(() => expect(theme.value).toBe("dark"));
+  });
+
+  it("syncs independent controllers through indexeddb", async () => {
+    const database = `signals-test-${Date.now()}-sync`;
+    const first = __private__.createController("shared-indexeddb", 1, {
+      storage: "indexeddb",
+      indexedDB: { database },
+    });
+    const second = __private__.createController("shared-indexeddb", 0, {
+      storage: "indexeddb",
+      indexedDB: { database },
+    });
+
+    first.signal.value = 5;
+    await vi.waitFor(() => expect(second.signal.value).toBe(5));
+
+    first.dispose();
+    second.dispose();
   });
 });

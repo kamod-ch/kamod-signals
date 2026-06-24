@@ -2,10 +2,11 @@ import type { PersistedSignal, PersistedSignalOptions, PersistedStorage } from "
 
 export interface StorageDriver {
   readonly type: PersistedStorage;
+  readonly async?: boolean;
   isAvailable(options?: PersistedSignalOptions<unknown>): boolean;
-  get(key: string, options?: PersistedSignalOptions<unknown>): string | null;
-  set(key: string, value: string, options?: PersistedSignalOptions<unknown>): void;
-  remove(key: string, options?: PersistedSignalOptions<unknown>): void;
+  get(key: string, options?: PersistedSignalOptions<unknown>): string | null | Promise<string | null>;
+  set(key: string, value: string, options?: PersistedSignalOptions<unknown>): void | Promise<void>;
+  remove(key: string, options?: PersistedSignalOptions<unknown>): void | Promise<void>;
   subscribe?(key: string, callback: () => void, options?: PersistedSignalOptions<unknown>): () => void;
 }
 

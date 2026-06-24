@@ -1,6 +1,6 @@
 # @kamod-ch/signals
 
-Persisted Preact signals for localStorage, sessionStorage, cookies, and memory.
+Persisted Preact signals for localStorage, sessionStorage, IndexedDB, cookies, and memory.
 
 ## Install
 
@@ -36,11 +36,16 @@ usePersistedSignal<T>(key: string, initialValue: T, options?: PersistedSignalOpt
 
 ```ts
 type PersistedSignalOptions<T> = {
-  storage?: "local" | "session" | "cookie" | "memory";
+  storage?: "local" | "session" | "indexeddb" | "cookie" | "memory";
   serialize?: (value: T) => string;
   deserialize?: (raw: string) => T;
   sync?: boolean;
   removeOnUndefined?: boolean;
+  indexedDB?: {
+    database?: string;
+    store?: string;
+    version?: number;
+  };
   cookie?: {
     expires?: number | Date;
     path?: string;
@@ -133,5 +138,6 @@ const theme = persistedSignal("theme", "dark", {
 
 - SSR-safe: browser-only storage is never touched on the server.
 - Cookie SSR works when you pass `cookieContext`.
-- `local` and `session` fall back to in-memory storage when unavailable.
+- `local`, `session`, and `indexeddb` fall back to in-memory storage when unavailable.
+- IndexedDB hydration is async, so signals start with `initialValue` and update after the persisted value loads.
 - `persistedSignal()` is global and returns the same signal for the same `storage + key` pair.

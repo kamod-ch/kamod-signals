@@ -1,6 +1,7 @@
 export type {
   CookieContext,
   CookieOptions,
+  IndexedDBOptions,
   PersistedSignal,
   PersistedSignalOptions,
   PersistedStorage,

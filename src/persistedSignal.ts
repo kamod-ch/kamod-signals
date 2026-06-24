@@ -14,15 +14,10 @@ const cookieContextIds = new WeakMap<object, number>();
 const UNDEFINED_TOKEN = "__KAMOD_SIGNALS_UNDEFINED__";
 let cookieContextIdCounter = 0;
 
-const readInitialValue = <T>(
-  key: string,
-  initialValue: T,
-  options: PersistedSignalOptions<T>,
-  driver = resolveDriver(resolveStorageType(options.storage), options as PersistedSignalOptions<unknown>),
-): T => {
-  const deserialize = options.deserialize ?? defaultDeserialize<T>;
-  const raw = driver.get(key, options as PersistedSignalOptions<unknown>);
+const isPromiseLike = <T>(value: unknown): value is Promise<T> =>
+  typeof value === "object" && value !== null && "then" in value && typeof value.then === "function";
 
+const parseStoredValue = <T>(raw: string | null, initialValue: T, deserialize: (raw: string) => T): T => {
   if (raw === null) {
     return initialValue;
   }
@@ -38,6 +33,22 @@ const readInitialValue = <T>(
   }
 };
 
+const readInitialValue = <T>(
+  key: string,
+  initialValue: T,
+  options: PersistedSignalOptions<T>,
+  driver = resolveDriver(resolveStorageType(options.storage), options as PersistedSignalOptions<unknown>),
+): T => {
+  const deserialize = options.deserialize ?? defaultDeserialize<T>;
+  const raw = driver.get(key, options as PersistedSignalOptions<unknown>);
+
+  if (isPromiseLike<string | null>(raw)) {
+    return initialValue;
+  }
+
+  return parseStoredValue(raw, initialValue, deserialize);
+};
+
 const createController = <T>(
   key: string,
   initialValue: T,
@@ -50,11 +61,31 @@ const createController = <T>(
   const removeOnUndefined = options.removeOnUndefined ?? true;
   const state = signal<T>(readInitialValue(key, initialValue, options, driver)) as PersistedSignal<T>;
   let isApplyingExternalValue = false;
+  let isHydrating = Boolean(driver.async);
+  let observedValue = state.value;
+  let hasPendingHydrationChange = false;
+
+  const persistValue = (value: T) => {
+    try {
+      if (value === undefined && removeOnUndefined) {
+        return driver.remove(key, options as PersistedSignalOptions<unknown>);
+      }
+
+      return driver.set(
+        key,
+        value === undefined ? UNDEFINED_TOKEN : serialize(value),
+        options as PersistedSignalOptions<unknown>,
+      );
+    } catch {
+      return undefined;
+    }
+  };
 
   state.clear = () => {
     isApplyingExternalValue = true;
     driver.remove(key, options as PersistedSignalOptions<unknown>);
     state.value = initialValue;
+    observedValue = state.value;
     isApplyingExternalValue = false;
   };
 
@@ -66,42 +97,83 @@ const createController = <T>(
     const value = state.value;
 
     if (isApplyingExternalValue) {
+      observedValue = value;
       return;
     }
 
-    if (value === undefined && removeOnUndefined) {
-      driver.remove(key, options as PersistedSignalOptions<unknown>);
+    if (isHydrating) {
+      if (!Object.is(value, observedValue)) {
+        hasPendingHydrationChange = true;
+      }
+      observedValue = value;
       return;
     }
 
-    try {
-      driver.set(
-        key,
-        value === undefined ? UNDEFINED_TOKEN : serialize(value),
-        options as PersistedSignalOptions<unknown>,
-      );
-    } catch {
-      // ignore storage write errors and keep signal reactive in memory
-    }
+    observedValue = value;
+    persistValue(value);
   });
+
+  if (driver.async) {
+    Promise.resolve(driver.get(key, options as PersistedSignalOptions<unknown>))
+      .then((raw) => {
+        if (!hasPendingHydrationChange) {
+          const nextValue = parseStoredValue(raw, initialValue, deserialize);
+          if (!Object.is(nextValue, state.value)) {
+            isApplyingExternalValue = true;
+            state.value = nextValue;
+            observedValue = nextValue;
+            isApplyingExternalValue = false;
+          }
+        }
+
+        isHydrating = false;
+
+        if (hasPendingHydrationChange) {
+          persistValue(state.value);
+        }
+      })
+      .catch(() => {
+        isHydrating = false;
+        if (hasPendingHydrationChange) {
+          persistValue(state.value);
+        }
+      });
+  }
+
+  const applyExternalRaw = (raw: string | null) => {
+    const nextValue = parseStoredValue(raw, initialValue, deserialize);
+
+    if (Object.is(nextValue, state.value)) {
+      return;
+    }
+
+    isApplyingExternalValue = true;
+    state.value = nextValue;
+    observedValue = nextValue;
+    isApplyingExternalValue = false;
+  };
 
   const stopSync = options.sync === false || !driver.subscribe
     ? () => {}
     : driver.subscribe(key, () => {
-        const raw = driver.get(key, options as PersistedSignalOptions<unknown>);
-        const nextValue = raw === null
-          ? initialValue
-          : raw === UNDEFINED_TOKEN
-            ? (undefined as T)
-            : deserialize(raw);
+        try {
+          const raw = driver.get(key, options as PersistedSignalOptions<unknown>);
 
-        if (Object.is(nextValue, state.value)) {
-          return;
+          if (isPromiseLike<string | null>(raw)) {
+            raw
+              .then((value) => {
+                applyExternalRaw(value);
+              })
+              .catch(() => {
+                // ignore malformed external updates
+              });
+            return;
+          }
+
+          applyExternalRaw(raw);
+        } catch {
+          // ignore malformed external updates
         }
-
-        isApplyingExternalValue = true;
-        state.value = nextValue;
-        isApplyingExternalValue = false;
       }, options as PersistedSignalOptions<unknown>);
 
   return {

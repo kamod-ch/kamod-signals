@@ -1,7 +1,7 @@
 {
   "name": "@kamod-ch/signals",
   "version": "0.1.0",
-  "description": "Persisted Preact signals with localStorage, sessionStorage, cookie, and memory drivers.",
+  "description": "Persisted Preact signals with localStorage, sessionStorage, IndexedDB, cookie, and memory drivers.",
   "type": "module",
   "license": "MIT",
   "author": "Klaus Zahiragic <watzak>",

@@ -2,8 +2,11 @@ import { isBrowser, type StorageDriver } from "./shared";
 import type { CookieContext, CookieOptions, PersistedSignalOptions, PersistedStorage } from "./types";
 
 const CHANNEL_PREFIX = "@kamod-ch/signals";
+const INDEXED_DB_NAME = "@kamod-ch/signals";
+const INDEXED_DB_STORE = "signals";
 const memoryStore = new Map<string, string>();
 const memoryListeners = new Map<string, Set<() => void>>();
+const indexedDbConnections = new Map<string, Promise<IDBDatabase>>();
 
 const channelName = (storage: PersistedStorage, key: string) => `${CHANNEL_PREFIX}:${storage}:${key}`;
 
@@ -340,6 +343,113 @@ const memoryDriver: StorageDriver = {
   },
 };
 
+const getIndexedDbConfig = (options?: PersistedSignalOptions<unknown>) => ({
+  database: options?.indexedDB?.database ?? INDEXED_DB_NAME,
+  store: options?.indexedDB?.store ?? INDEXED_DB_STORE,
+  version: options?.indexedDB?.version ?? 1,
+});
+
+const requestToPromise = <T>(request: IDBRequest<T>) =>
+  new Promise<T>((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error ?? new Error("IndexedDB request failed"));
+  });
+
+const openIndexedDb = async (database: string, store: string, version: number): Promise<IDBDatabase> => {
+  const cacheKey = `${database}:${store}:${version}`;
+  const existing = indexedDbConnections.get(cacheKey);
+  if (existing) {
+    return existing;
+  }
+
+  const connection = new Promise<IDBDatabase>((resolve, reject) => {
+    const request = indexedDB.open(database, version);
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(store)) {
+        db.createObjectStore(store);
+      }
+    };
+
+    request.onsuccess = () => {
+      const db = request.result;
+
+      if (!db.objectStoreNames.contains(store)) {
+        db.close();
+        indexedDbConnections.delete(cacheKey);
+        openIndexedDb(database, store, version + 1).then(resolve, reject);
+        return;
+      }
+
+      db.onversionchange = () => {
+        db.close();
+        indexedDbConnections.delete(cacheKey);
+      };
+
+      resolve(db);
+    };
+
+    request.onerror = () => {
+      indexedDbConnections.delete(cacheKey);
+      reject(request.error ?? new Error("Failed to open IndexedDB"));
+    };
+
+    request.onblocked = () => {
+      indexedDbConnections.delete(cacheKey);
+      reject(new Error("IndexedDB open blocked"));
+    };
+  });
+
+  indexedDbConnections.set(cacheKey, connection);
+  return connection;
+};
+
+const runIndexedDbTransaction = async <T>(
+  mode: IDBTransactionMode,
+  key: string,
+  options: PersistedSignalOptions<unknown> | undefined,
+  operation: (store: IDBObjectStore) => IDBRequest<T>,
+) => {
+  const { database, store, version } = getIndexedDbConfig(options);
+  const db = await openIndexedDb(database, store, version);
+  const transaction = db.transaction(store, mode);
+  return requestToPromise(operation(transaction.objectStore(store)));
+};
+
+const indexedDbDriver: StorageDriver = {
+  type: "indexeddb",
+  async: true,
+  isAvailable() {
+    return isBrowser && typeof indexedDB !== "undefined";
+  },
+  async get(key, options) {
+    try {
+      const result = await runIndexedDbTransaction("readonly", key, options, (store) => store.get(key));
+      return typeof result === "string" ? result : null;
+    } catch {
+      return null;
+    }
+  },
+  async set(key, value, options) {
+    try {
+      await runIndexedDbTransaction("readwrite", key, options, (store) => store.put(value, key));
+    } finally {
+      emitChannel("indexeddb", key);
+    }
+  },
+  async remove(key, options) {
+    try {
+      await runIndexedDbTransaction("readwrite", key, options, (store) => store.delete(key));
+    } finally {
+      emitChannel("indexeddb", key);
+    }
+  },
+  subscribe(key, callback) {
+    return subscribeChannel("indexeddb", key, callback);
+  },
+};
+
 const localDriver = createWebStorageDriver("local", () => window.localStorage);
 const sessionDriver = createWebStorageDriver("session", () => window.sessionStorage);
 
@@ -348,6 +458,7 @@ export const drivers: Record<PersistedStorage, StorageDriver> = {
   session: sessionDriver,
   cookie: cookieDriver,
   memory: memoryDriver,
+  indexeddb: indexedDbDriver,
 };
 
 export const resolveDriver = (
