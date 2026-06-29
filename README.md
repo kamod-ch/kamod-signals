@@ -137,7 +137,10 @@ const theme = persistedSignal("theme", "dark", {
 ## Notes
 
 - SSR-safe: browser-only storage is never touched on the server.
-- Cookie SSR works when you pass `cookieContext`.
+- Cookie SSR works when you pass `cookieContext`, and caching stays scoped to that request context.
+- Different SSR cookie contexts stay isolated, and no explicit cleanup call is required for the documented pattern.
 - `local`, `session`, and `indexeddb` fall back to in-memory storage when unavailable.
 - IndexedDB hydration is async, so signals start with `initialValue` and update after the persisted value loads.
-- `persistedSignal()` is global and returns the same signal for the same `storage + key` pair.
+- `persistedSignal()` returns the same signal for the same global identity (`storage + key`, with `cookieContext` scoping for SSR cookies).
+- Reusing that identity requires the same effective options; conflicting options throw instead of being ignored.
+- Different `cookieContext` values stay isolated for SSR cookie usage.

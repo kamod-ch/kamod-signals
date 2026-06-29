@@ -7,12 +7,40 @@ import {
   resolveStorageType,
   type PersistedSignalController,
 } from "./shared";
-import type { PersistedSignal, PersistedSignalOptions } from "./types";
+import type { CookieOptions, PersistedSignal, PersistedSignalOptions, PersistedStorage } from "./types";
 
-const globalRegistry = new Map<string, PersistedSignalController<unknown>>();
-const cookieContextIds = new WeakMap<object, number>();
+type NormalizedCookieOptions = {
+  expires: string | number | undefined;
+  path: string;
+  domain: string | undefined;
+  secure: boolean | undefined;
+  sameSite: CookieOptions["sameSite"] | undefined;
+};
+
+type CompatibilitySnapshot = {
+  storage: PersistedStorage;
+  serialize: unknown;
+  deserialize: unknown;
+  sync: boolean;
+  removeOnUndefined: boolean;
+  cookie: NormalizedCookieOptions | undefined;
+  indexedDB:
+    | {
+        database: string;
+        store: string;
+        version: number;
+      }
+    | undefined;
+};
+
+type RegistryEntry = {
+  controller: PersistedSignalController<unknown>;
+  snapshot: CompatibilitySnapshot;
+};
+
+const globalRegistry = new Map<string, RegistryEntry>();
+const cookieContextRegistry = new WeakMap<object, Map<string, RegistryEntry>>();
 const UNDEFINED_TOKEN = "__KAMOD_SIGNALS_UNDEFINED__";
-let cookieContextIdCounter = 0;
 
 const isPromiseLike = <T>(value: unknown): value is Promise<T> =>
   typeof value === "object" && value !== null && "then" in value && typeof value.then === "function";
@@ -47,6 +75,59 @@ const readInitialValue = <T>(
   }
 
   return parseStoredValue(raw, initialValue, deserialize);
+};
+
+const normalizeCookieOptions = (cookie?: CookieOptions): NormalizedCookieOptions => ({
+  expires: cookie?.expires instanceof Date ? cookie.expires.toUTCString() : cookie?.expires,
+  path: cookie?.path ?? "/",
+  domain: cookie?.domain,
+  secure: cookie?.secure,
+  sameSite: cookie?.sameSite,
+});
+
+const createCompatibilitySnapshot = <T>(options: PersistedSignalOptions<T>): CompatibilitySnapshot => {
+  const storage = resolveStorageType(options.storage);
+
+  return {
+    storage,
+    serialize: options.serialize ?? defaultSerialize<T>,
+    deserialize: options.deserialize ?? defaultDeserialize<T>,
+    sync: options.sync ?? true,
+    removeOnUndefined: options.removeOnUndefined ?? true,
+    cookie: storage === "cookie" ? normalizeCookieOptions(options.cookie) : undefined,
+    indexedDB:
+      storage === "indexeddb"
+        ? {
+            database: options.indexedDB?.database ?? "@kamod-ch/signals",
+            store: options.indexedDB?.store ?? "signals",
+            version: options.indexedDB?.version ?? 1,
+          }
+        : undefined,
+  };
+};
+
+const snapshotsMatch = (left: CompatibilitySnapshot, right: CompatibilitySnapshot) =>
+  left.storage === right.storage &&
+  left.serialize === right.serialize &&
+  left.deserialize === right.deserialize &&
+  left.sync === right.sync &&
+  left.removeOnUndefined === right.removeOnUndefined &&
+  JSON.stringify(left.cookie) === JSON.stringify(right.cookie) &&
+  JSON.stringify(left.indexedDB) === JSON.stringify(right.indexedDB);
+
+const createOptionConflictError = (id: string) =>
+  new Error(`persistedSignal(${id}) received conflicting options for an existing global signal`);
+
+const getCompatibleEntry = <T>(entry: RegistryEntry | undefined, snapshot: CompatibilitySnapshot, id: string) => {
+  if (!entry) {
+    return undefined;
+  }
+
+  if (!snapshotsMatch(entry.snapshot, snapshot)) {
+    throw createOptionConflictError(id);
+  }
+
+  return entry.controller as PersistedSignalController<T>;
 };
 
 const createController = <T>(
@@ -185,36 +266,40 @@ const createController = <T>(
   };
 };
 
-const getCookieContextRegistrySuffix = (options: PersistedSignalOptions<unknown>) => {
-  const context = options.cookieContext;
-  if (!context) {
-    return "";
-  }
-
-  let id = cookieContextIds.get(context as object);
-  if (!id) {
-    id = ++cookieContextIdCounter;
-    cookieContextIds.set(context as object, id);
-  }
-
-  return `:ctx-${id}`;
-};
-
 export const persistedSignal = <T>(
   key: string,
   initialValue: T,
   options: PersistedSignalOptions<T> = {},
 ): PersistedSignal<T> => {
   const storage = resolveStorageType(options.storage);
-  const id = `${registryKey(storage, key)}${storage === "cookie" ? getCookieContextRegistrySuffix(options as PersistedSignalOptions<unknown>) : ""}`;
-  const existing = globalRegistry.get(id) as PersistedSignalController<T> | undefined;
+  const id = registryKey(storage, key);
+  const snapshot = createCompatibilitySnapshot(options);
+  const context = storage === "cookie" ? options.cookieContext : undefined;
 
+  if (context) {
+    let scopedRegistry = cookieContextRegistry.get(context as object);
+    if (!scopedRegistry) {
+      scopedRegistry = new Map<string, RegistryEntry>();
+      cookieContextRegistry.set(context as object, scopedRegistry);
+    }
+
+    const existing = getCompatibleEntry<T>(scopedRegistry.get(id), snapshot, id);
+    if (existing) {
+      return existing.signal;
+    }
+
+    const controller = createController(key, initialValue, options);
+    scopedRegistry.set(id, { controller: controller as PersistedSignalController<unknown>, snapshot });
+    return controller.signal;
+  }
+
+  const existing = getCompatibleEntry<T>(globalRegistry.get(id), snapshot, id);
   if (existing) {
     return existing.signal;
   }
 
   const controller = createController(key, initialValue, options);
-  globalRegistry.set(id, controller as PersistedSignalController<unknown>);
+  globalRegistry.set(id, { controller: controller as PersistedSignalController<unknown>, snapshot });
   return controller.signal;
 };
 
