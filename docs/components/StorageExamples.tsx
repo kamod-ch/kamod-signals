@@ -1,5 +1,5 @@
 import { useMemo } from "preact/hooks";
-import { persistedSignal, usePersistedSignal } from "@kamod-ch/signals";
+import { persistedSignal, usePersistedSignal } from "../../src/index.ts";
 import DemoCard, { pretty } from "./DemoCard.tsx";
 
 export default function StorageExamples() {
