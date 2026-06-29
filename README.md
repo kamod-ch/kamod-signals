@@ -143,4 +143,3 @@ const theme = persistedSignal("theme", "dark", {
 - IndexedDB hydration is async, so signals start with `initialValue` and update after the persisted value loads.
 - `persistedSignal()` returns the same signal for the same global identity (`storage + key`, with `cookieContext` scoping for SSR cookies).
 - Reusing that identity requires the same effective options; conflicting options throw instead of being ignored.
-- Different `cookieContext` values stay isolated for SSR cookie usage.

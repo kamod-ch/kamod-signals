@@ -1,0 +1,18 @@
+{
+  "name": "@kamod-ch/signals-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "preactpress dev",
+    "check": "preactpress check",
+    "build": "preactpress build",
+    "preview": "preactpress preview"
+  },
+  "dependencies": {
+    "@kamod-ch/signals": "workspace:*"
+  },
+  "devDependencies": {
+    "@kamod-ch/preactpress": "^1.0.0",
+    "typescript": "^6.0.3"
+  }
+}
