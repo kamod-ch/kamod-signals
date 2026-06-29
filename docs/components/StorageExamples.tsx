@@ -1,34 +1,6 @@
 import { useMemo } from "preact/hooks";
 import { persistedSignal, usePersistedSignal } from "@kamod-ch/signals";
-
-const pretty = (value: unknown) => JSON.stringify(value, null, 2);
-
-function DemoCard(props: {
-  title: string;
-  storage: string;
-  description: string;
-  value: unknown;
-  actions: Array<{ text: string; onClick: () => void; secondary?: boolean }>;
-  accent?: string;
-}) {
-  return (
-    <article class={`signals-demo-card${props.accent ? ` signals-demo-card-${props.accent}` : ""}`}>
-      <div class="signals-demo-head">
-        <h3>{props.title}</h3>
-        <span class="signals-kbd">{props.storage}</span>
-      </div>
-      <p>{props.description}</p>
-      <pre class="signals-demo-value">{pretty(props.value)}</pre>
-      <div class="signals-demo-actions">
-        {props.actions.map((action) => (
-          <button class={action.secondary ? "secondary" : undefined} onClick={action.onClick} type="button">
-            {action.text}
-          </button>
-        ))}
-      </div>
-    </article>
-  );
-}
+import DemoCard, { pretty } from "./DemoCard.tsx";
 
 export default function StorageExamples() {
   const theme = usePersistedSignal("docs-theme", "dark", { storage: "local" });
@@ -113,10 +85,26 @@ export default function StorageExamples() {
           <span class="signals-kbd">memory</span>
         </div>
         <p>Two controllers with the same storage/key pair share a single reactive state.</p>
-        <pre class="signals-demo-value">{pretty({ first: sharedA.value, second: sharedB.value })}</pre>
+        <pre class="signals-demo-value">
+          <span class="signals-demo-value-label">value </span>
+          {pretty({ first: sharedA.value, second: sharedB.value })}
+        </pre>
         <div class="signals-demo-actions">
-          <button type="button" onClick={() => (sharedA.value += 1)}>Increment first</button>
-          <button class="secondary" type="button" onClick={() => (sharedB.value = 0)}>Reset second</button>
+          <button
+            type="button"
+            onClick={() => (sharedA.value += 1)}
+            style={{ color: "#ffffff", WebkitTextFillColor: "#ffffff", background: "#1d4ed8" }}
+          >
+            Increment first
+          </button>
+          <button
+            class="secondary"
+            type="button"
+            onClick={() => (sharedB.value = 0)}
+            style={{ color: "var(--pp-c-text-1, #0f172a)", WebkitTextFillColor: "var(--pp-c-text-1, #0f172a)" }}
+          >
+            Reset second
+          </button>
         </div>
       </article>
     </div>

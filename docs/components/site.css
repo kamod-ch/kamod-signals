@@ -66,6 +66,23 @@
   border-radius: 4px;
 }
 
+.pp-mkt-page .pp-doc-content-plain a.signals-btn-brand {
+  color: #fff;
+}
+
+.pp-mkt-page .pp-doc-content-plain a.signals-btn-alt,
+.pp-mkt-page .pp-doc-content-plain a.signals-btn-quiet {
+  color: var(--pp-c-text-1, #0f172a);
+}
+
+:root.dark .pp-mkt-page .pp-doc-content-plain a.signals-btn-alt {
+  color: #e5eefb;
+}
+
+:root.dark .pp-mkt-page .pp-doc-content-plain a.signals-btn-quiet {
+  color: #93c5fd;
+}
+
 .pp-mkt-page .pp-doc-content-plain code {
   font-size: 0.92em;
 }
@@ -166,7 +183,7 @@
 
 .signals-mkt-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  grid-template-columns: 1fr;
   gap: 2.5rem;
   align-items: center;
   padding: 2rem 0 2.5rem;
@@ -459,6 +476,145 @@
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.88));
 }
 
+.signals-hero-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-bottom: 1rem;
+}
+
+.signals-hero-tab {
+  appearance: none;
+  border: 1px solid var(--signals-border);
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem;
+  background: color-mix(in srgb, var(--pp-c-bg, #fff) 92%, transparent);
+  color: var(--pp-c-text-2, #64748b);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 160ms var(--signals-ease), border-color 160ms var(--signals-ease), box-shadow 160ms var(--signals-ease), color 160ms var(--signals-ease), background-color 160ms var(--signals-ease);
+}
+
+.signals-hero-tab:hover {
+  transform: translateY(-1px);
+  color: var(--pp-c-text-1, #0f172a);
+}
+
+.signals-hero-tab.is-active {
+  color: var(--pp-c-text-1, #0f172a);
+  border-color: transparent;
+  box-shadow: var(--signals-shadow-soft);
+}
+
+.signals-hero-tab-local.is-active { background: linear-gradient(180deg, rgba(37, 99, 235, 0.16), rgba(96, 165, 250, 0.1)); }
+.signals-hero-tab-session.is-active { background: linear-gradient(180deg, rgba(124, 58, 237, 0.16), rgba(167, 139, 250, 0.1)); }
+.signals-hero-tab-cookie.is-active { background: linear-gradient(180deg, rgba(245, 158, 11, 0.18), rgba(251, 191, 36, 0.1)); }
+.signals-hero-tab-memory.is-active { background: linear-gradient(180deg, rgba(16, 185, 129, 0.16), rgba(52, 211, 153, 0.1)); }
+.signals-hero-tab-indexeddb.is-active { background: linear-gradient(180deg, rgba(14, 165, 233, 0.16), rgba(34, 211, 238, 0.1)); }
+
+.signals-hero-showcase {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.signals-hero-showcase .signals-code-panel {
+  margin: 0;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.signals-hero-live {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem 1.1rem 1.1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  background: color-mix(in srgb, var(--pp-c-bg, #fff) 90%, transparent);
+}
+
+.signals-hero-live::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, #2563eb, #38bdf8);
+}
+
+.signals-hero-live-local::before { background: linear-gradient(90deg, #2563eb, #60a5fa); }
+.signals-hero-live-session::before { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
+.signals-hero-live-cookie::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.signals-hero-live-memory::before { background: linear-gradient(90deg, #10b981, #34d399); }
+.signals-hero-live-indexeddb::before { background: linear-gradient(90deg, #0ea5e9, #22d3ee); }
+
+.signals-hero-live-head {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.signals-hero-live-desc {
+  margin: 0;
+  line-height: 1.65;
+  color: var(--pp-c-text-2, #64748b);
+  font-size: 0.95rem;
+}
+
+.signals-hero-live-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.signals-hero-live-value {
+  flex: 1 1 12rem;
+  margin: 0;
+  min-height: 2.85rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--pp-c-text-1, #0f172a);
+}
+
+.signals-hero-live-actions {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.signals-demo-card-compact {
+  margin: 0;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: none;
+  background: color-mix(in srgb, var(--pp-c-bg, #fff) 88%, transparent);
+}
+
+.signals-demo-card-compact:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.signals-demo-card-compact .signals-demo-value {
+  min-height: 3.2rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--pp-c-text-1, #0f172a);
+}
+
+.signals-demo-card-compact p {
+  margin: 0;
+  line-height: 1.65;
+  color: var(--pp-c-text-2, #64748b);
+}
+
 .signals-mkt-panel::after {
   content: "";
   position: absolute;
@@ -581,6 +737,10 @@
   gap: 1rem;
   align-items: center;
   padding: 1.15rem 1.3rem;
+}
+
+.pp-mkt-page .pp-doc-content-plain > .signals-strip + h2.pp-heading {
+  margin-top: 4.5rem;
 }
 
 .signals-strip::before {
@@ -774,6 +934,11 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
+.signals-demo-value-label {
+  color: var(--pp-c-text-2, #64748b);
+  font-weight: 600;
+}
+
 .signals-demo-actions {
   display: flex;
   flex-wrap: wrap;
@@ -785,10 +950,13 @@
   border-radius: 10px;
   padding: 0.6rem 0.85rem;
   cursor: pointer;
-  background: var(--pp-c-brand-1, #2563eb);
-  color: white;
+  appearance: none;
+  background: #1d4ed8 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
   font: inherit;
   font-weight: 600;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
   transition: transform 160ms var(--signals-ease), opacity 160ms var(--signals-ease), box-shadow 160ms var(--signals-ease), background-color 160ms var(--signals-ease);
 }
 
@@ -802,8 +970,10 @@
 }
 
 .signals-demo-actions button.secondary {
-  background: var(--pp-c-bg-soft, rgba(148, 163, 184, 0.18));
-  color: var(--pp-c-text-1, #0f172a);
+  background: var(--pp-c-bg-soft, rgba(148, 163, 184, 0.18)) !important;
+  color: var(--pp-c-text-1, #0f172a) !important;
+  -webkit-text-fill-color: var(--pp-c-text-1, #0f172a) !important;
+  text-shadow: none;
 }
 
 .signals-cta-card {
@@ -910,6 +1080,32 @@
   color: #e5eefb;
 }
 
+:root.dark .signals-hero-live {
+  background: color-mix(in srgb, var(--pp-c-bg, #0f172a) 90%, transparent);
+  border-top-color: rgba(148, 163, 184, 0.14);
+}
+
+:root.dark .signals-hero-showcase {
+  border-color: rgba(148, 163, 184, 0.14);
+}
+
+:root.dark .signals-hero-live-value {
+  color: var(--pp-c-text-1, #e2e8f0);
+}
+
+:root.dark .signals-demo-card-compact {
+  background: color-mix(in srgb, var(--pp-c-bg, #0f172a) 88%, transparent);
+  border-color: rgba(148, 163, 184, 0.16);
+}
+
+:root.dark .signals-hero-tab {
+  background: color-mix(in srgb, var(--pp-c-bg, #0f172a) 92%, transparent);
+}
+
+:root.dark .signals-demo-card-compact .signals-demo-value {
+  color: var(--pp-c-text-1, #e2e8f0);
+}
+
 :root.dark .signals-mkt-panel {
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.9));
 }
@@ -948,6 +1144,17 @@
   box-shadow: 0 12px 30px rgba(37, 99, 235, 0.35);
 }
 
+:root.dark .signals-demo-actions button:not(.secondary) {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+:root.dark .signals-demo-actions button.secondary {
+  color: #e5eefb !important;
+  -webkit-text-fill-color: #e5eefb !important;
+}
+
 :root.dark .signals-card:hover,
 :root.dark .signals-demo-card:hover,
 :root.dark .signals-strip:hover,
@@ -972,6 +1179,15 @@
     grid-template-columns: 1fr;
   }
 
+  .signals-hero-live-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .signals-hero-live-actions {
+    width: 100%;
+  }
+
   .signals-panel-meta {
     align-items: flex-start;
     flex-direction: column;
@@ -990,6 +1206,10 @@
   .pp-doc:not(.pp-doc-home) .pp-doc-content-plain th,
   .pp-doc:not(.pp-doc-home) .pp-doc-content-plain td {
     padding: 0.8rem 0.85rem;
+  }
+
+  .pp-mkt-page .pp-doc-content-plain > .signals-strip + h2.pp-heading {
+    margin-top: 3rem;
   }
 
   .signals-mkt-shell {
