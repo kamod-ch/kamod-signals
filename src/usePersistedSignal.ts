@@ -18,6 +18,13 @@ const cookieDependencyKey = (options: PersistedSignalOptions<unknown>) => {
   ]);
 };
 
+const indexedDbDependencyKey = (options: PersistedSignalOptions<unknown>) =>
+  JSON.stringify([
+    options.indexedDB?.database ?? "@kamod-ch/signals",
+    options.indexedDB?.store ?? "signals",
+    options.indexedDB?.version ?? 1,
+  ]);
+
 export const usePersistedSignal = <T>(
   key: string,
   initialValue: T,
@@ -35,6 +42,7 @@ export const usePersistedSignal = <T>(
       options.removeOnUndefined,
       options.cookieContext,
       cookieDependencyKey(options as PersistedSignalOptions<unknown>),
+      indexedDbDependencyKey(options as PersistedSignalOptions<unknown>),
     ],
   );
 

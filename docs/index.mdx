@@ -1,0 +1,58 @@
+---
+layout: home
+title: "@kamod-ch/signals"
+description: Persisted Preact signals for localStorage, sessionStorage, IndexedDB, cookies, and memory.
+sidebar: false
+pageClass: pp-mkt-page
+markdownStyles: false
+---
+
+import "./components/site.css";
+import ExamplesOverview from "./components/ExamplesOverview.tsx";
+import MarketingHero from "./components/MarketingHero.tsx";
+import QuickStartStrip from "./components/QuickStartStrip.tsx";
+import StorageExamples from "./components/StorageExamples.tsx";
+import UseCasesGrid from "./components/UseCasesGrid.tsx";
+
+<MarketingHero />
+<QuickStartStrip />
+
+## Why `@kamod-ch/signals`
+
+<div class="signals-section">
+  <div class="signals-lead">
+    <code>@kamod-ch/signals</code> adds persistence to Preact signals without changing how signals feel.
+    Start with one signal, choose a storage driver, and keep the same simple API.
+  </div>
+  <ExamplesOverview />
+</div>
+
+## Common examples
+
+<div class="signals-section">
+  <div class="signals-lead">
+    Explore practical scenarios: theme preferences, tab-scoped UI state, SSR-friendly cookie values,
+    memory-only reactive state, IndexedDB-backed drafts, and shared-key synchronization.
+  </div>
+  <StorageExamples />
+</div>
+
+## Typical use cases
+
+<div class="signals-section">
+  <UseCasesGrid />
+</div>
+
+<div class="signals-section signals-cta-card">
+  <div>
+    <p class="signals-strip-label">Next step</p>
+    <h2>Get your first persisted signal working in minutes.</h2>
+    <p class="signals-lead">
+      Start with the quick setup guide, then compare storage drivers once you have one real example working.
+    </p>
+  </div>
+  <div class="signals-mkt-actions">
+    <a class="signals-btn signals-btn-brand" href="/guide/getting-started">Start setup guide</a>
+    <a class="signals-btn signals-btn-alt" href="/examples/storage-showcase">Compare storage drivers</a>
+  </div>
+</div>

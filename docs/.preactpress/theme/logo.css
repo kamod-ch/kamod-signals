@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@700&display=swap');
+
+:root,
+:root[data-theme="light"] {
+  --ks-brand-orange: #f9a01b;
+}
+
+.pp-title .ks-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--pp-text);
+  text-decoration: none;
+}
+.ks-logo__kamod-wrap {
+  display: grid;
+  align-items: center;
+  height: 2rem;
+  flex-shrink: 0;
+}
+.ks-logo__kamod {
+  grid-area: 1 / 1;
+  display: block;
+  height: 2rem;
+  width: auto;
+  object-fit: contain;
+  justify-self: start;
+}
+.ks-logo__kamod--dark {
+  opacity: 0;
+  pointer-events: none;
+}
+.ks-logo__signals {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2rem;
+  color: var(--ks-brand-orange);
+  font-family: 'Quicksand', system-ui, sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  translate: 0 0.06rem;
+  -webkit-font-smoothing: antialiased;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .ks-logo__kamod--light { opacity: 0; }
+  :root:not([data-theme]) .ks-logo__kamod--dark { opacity: 1; pointer-events: auto; }
+  :root:not([data-theme]) .ks-logo__signals { translate: 0 0.05rem; }
+}
+:root[data-theme='dark'] .ks-logo__kamod--light { opacity: 0; }
+:root[data-theme='dark'] .ks-logo__kamod--dark { opacity: 1; pointer-events: auto; }
+:root[data-theme='dark'] .ks-logo__signals { translate: 0 0.05rem; }

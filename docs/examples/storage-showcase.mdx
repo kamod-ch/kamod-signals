@@ -1,0 +1,99 @@
+---
+title: Storage showcase
+description: Interactive examples for all supported storage drivers.
+---
+
+import "../components/site.css";
+import StorageExamples from "../components/StorageExamples.tsx";
+
+# Storage showcase
+
+Use this page to decide which storage driver fits your use case fastest.
+
+## Quick decision guide
+
+- **`local`** → preferences that should survive reloads and browser restarts
+- **`session`** → per-tab UI state that should reset when the tab closes
+- **`cookie`** → values the server also needs during SSR
+- **`memory`** → temporary or fallback state with no browser persistence
+- **`indexeddb`** → larger client-side data like drafts, caches, or offline data
+
+> **Good default:** start with `local` unless you specifically need per-tab behavior, SSR-visible cookies, or larger stored data.
+
+<StorageExamples />
+
+## Copy-paste examples
+
+### Theme preference with localStorage
+
+```ts
+const theme = persistedSignal("theme", "dark", { storage: "local" });
+```
+
+Best for:
+- theme
+- layout preferences
+- dismissed banners
+
+### Tab-scoped UI state with sessionStorage
+
+```ts
+const sidebarOpen = persistedSignal("sidebar-open", true, { storage: "session" });
+```
+
+Best for:
+- open/closed UI state
+- temporary per-tab filters
+- wizard progress that should reset with the tab
+
+### Larger client-side data with IndexedDB
+
+```ts
+const drafts = persistedSignal("drafts", [], {
+  storage: "indexeddb",
+  indexedDB: { database: "app-cache", store: "drafts" },
+});
+```
+
+Keep in mind:
+- IndexedDB hydrates asynchronously
+- the signal starts with `initialValue`
+- stored data is applied after loading completes
+
+### SSR-visible values with cookies
+
+```ts
+const locale = persistedSignal("locale", "de", {
+  storage: "cookie",
+  cookie: { path: "/", sameSite: "Lax" },
+});
+```
+
+Use this when:
+- the server needs the value during SSR
+- middleware or templates should see the same value
+
+If SSR does not need the value, prefer `local` or `session`.
+
+### Ephemeral state with memory
+
+```ts
+const draftStep = persistedSignal("draft-step", 1, { storage: "memory" });
+```
+
+Best for:
+- fallback behavior
+- non-persistent reactive state
+- temporary state in non-browser environments
+
+## Common gotchas
+
+- `persistedSignal()` is global by identity, so reuse the same key with the same effective options.
+- For SSR cookie usage, different `cookieContext` values stay isolated.
+- IndexedDB is the only built-in storage here with async hydration behavior.
+
+## Related pages
+
+- [Getting started](/guide/getting-started)
+- [API overview](/guide/api)
+- [Cookie SSR](/examples/cookie-ssr)
