@@ -1,3 +1,10 @@
+<p align="center">
+  <a href="https://kamod-ch.github.io/kamod-signals/">
+    <img src="assets/readme-banner-light.svg#gh-light-mode-only" alt="kamod Signals" height="40" />
+    <img src="assets/readme-banner-dark.svg#gh-dark-mode-only" alt="kamod Signals" height="40" />
+  </a>
+</p>
+
 # @kamod-ch/signals
 
 Persisted Preact signals for localStorage, sessionStorage, IndexedDB, cookies, and memory.
