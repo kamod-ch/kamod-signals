@@ -10,8 +10,8 @@ export default function QuickStartStrip() {
           Install in one command, then choose the right storage strategy for preferences, drafts, SSR hints, or fallback state.
         </div>
         <div class="signals-strip-actions">
-          <a class="signals-btn signals-btn-brand" href="/guide/getting-started">Open setup guide</a>
-          <a class="signals-btn signals-btn-quiet" href="/guide/api">Read API</a>
+          <a class="signals-btn signals-btn-brand" href="./guide/getting-started">Open setup guide</a>
+          <a class="signals-btn signals-btn-quiet" href="./guide/api">Read API</a>
         </div>
       </div>
     </section>

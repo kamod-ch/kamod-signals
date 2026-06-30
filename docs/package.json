@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "preactpress dev",
     "check": "preactpress check",
-    "build": "preactpress build",
+    "build": "preactpress build --base /kamod-signals/",
     "preview": "preactpress preview"
   },
   "dependencies": {

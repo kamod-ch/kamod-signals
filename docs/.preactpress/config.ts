@@ -8,7 +8,7 @@ const preactpressPackage = path.resolve(docsRoot, "node_modules/@kamod-ch/preact
 const preactpressClient = path.join(preactpressPackage, "src/client");
 const preactpressTheme = path.join(preactpressClient, "theme-default");
 
-const base = process.env.VITE_BASE_PATH?.trim() || (process.env.NODE_ENV === "production" ? "/kamod-signals/" : "/");
+const base = process.env.VITE_BASE_PATH?.trim() || "/";
 
 export default defineConfig({
   theme: "./theme/Layout.tsx",
@@ -24,7 +24,7 @@ export default defineConfig({
   site: {
     title: "kamod Signals",
     description: "Persisted Preact signals for localStorage, sessionStorage, IndexedDB, cookies, and memory.",
-    url: "https://kamod-ch.github.io/",
+    url: "https://kamod-ch.github.io",
     base,
   },
   markdown: {
