@@ -25,7 +25,7 @@ export default defineConfig({
     title: "kamod Signals",
     description: "Persisted Preact signals for localStorage, sessionStorage, IndexedDB, cookies, and memory.",
     url: "https://kamod-ch.github.io",
-    base,
+    base: "/kamod-signals/",
   },
   markdown: {
     html: false,
