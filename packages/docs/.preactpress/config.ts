@@ -1,17 +1,15 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { defineConfig } from "@kamod-ch/preactpress/config";
 
-const configDir = path.dirname(fileURLToPath(import.meta.url));
-const docsRoot = path.resolve(configDir, "..");
-const preactpressPackage = path.resolve(docsRoot, "node_modules/@kamod-ch/preactpress");
-const preactpressClient = path.join(preactpressPackage, "src/client");
-const preactpressTheme = path.join(preactpressClient, "theme-default");
 
-const rawBase = process.env.VITE_BASE_PATH?.trim() || "/signals/";
-const base = rawBase.startsWith("/") ? rawBase : `/${rawBase}`;
-const normalizedBase = base.endsWith("/") ? base : `${base}/`;
-const publicAsset = (file: string) => `${normalizedBase}${file.replace(/^\/+/, "")}`;
+const matomoImageTracker =
+  '<!-- Matomo Image Tracker--><img referrerpolicy="no-referrer-when-downgrade" src="https://matomo.kamod.ch/matomo.php?idsite=8&amp;rec=1" style="border:0" alt="" /><!-- End Matomo -->'
+
+const includeMatomoImageTracker = process.env.PREACTPRESS_INCLUDE_MATOMO === 'true'
+
+const isGithubPagesBuild = process.env.GITHUB_ACTIONS === 'true' || process.env.KAMOD_DOCS_BASE === 'github-pages'
+const base = isGithubPagesBuild ? '/kamod-signals/' : '/'
+const url = isGithubPagesBuild ? 'https://kamod-ch.github.io' : 'http://localhost:4173'
+
 
 export default defineConfig({
   theme: "./theme/Layout.tsx",
@@ -27,8 +25,8 @@ export default defineConfig({
   site: {
     title: "kamod Signals",
     description: "Persisted Preact signals for localStorage, sessionStorage, IndexedDB, cookies, and memory.",
-    url: "https://kamod-ch.github.io",
-    base: normalizedBase,
+    base,
+    url
   },
   markdown: {
     html: false,
@@ -38,6 +36,10 @@ export default defineConfig({
     ["link", { rel: "icon", href: publicAsset("favicon.svg"), type: "image/svg+xml" }],
     ["link", { rel: "apple-touch-icon", href: publicAsset("favicon.svg") }],
   ],
+  transformHtml(html) {
+    if (!includeMatomoImageTracker) return html
+    return html.replace('</body>', `  ${matomoImageTracker}\n  </body>`)
+  },
   themeConfig: {
     search: true,
     outline: true,
