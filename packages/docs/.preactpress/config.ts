@@ -8,7 +8,10 @@ const preactpressPackage = path.resolve(docsRoot, "node_modules/@kamod-ch/preact
 const preactpressClient = path.join(preactpressPackage, "src/client");
 const preactpressTheme = path.join(preactpressClient, "theme-default");
 
-const base = process.env.VITE_BASE_PATH?.trim() || "/";
+const rawBase = process.env.VITE_BASE_PATH?.trim() || "/signals/";
+const base = rawBase.startsWith("/") ? rawBase : `/${rawBase}`;
+const normalizedBase = base.endsWith("/") ? base : `${base}/`;
+const publicAsset = (file: string) => `${normalizedBase}${file.replace(/^\/+/, "")}`;
 
 export default defineConfig({
   theme: "./theme/Layout.tsx",
@@ -25,15 +28,15 @@ export default defineConfig({
     title: "kamod Signals",
     description: "Persisted Preact signals for localStorage, sessionStorage, IndexedDB, cookies, and memory.",
     url: "https://kamod-ch.github.io",
-    base: "/kamod-signals/",
+    base: normalizedBase,
   },
   markdown: {
     html: false,
     emoji: true,
   },
   head: [
-    ["link", { rel: "icon", href: "/kamod-signals/favicon.svg", type: "image/svg+xml" }],
-    ["link", { rel: "apple-touch-icon", href: "/kamod-signals/favicon.svg" }],
+    ["link", { rel: "icon", href: publicAsset("favicon.svg"), type: "image/svg+xml" }],
+    ["link", { rel: "apple-touch-icon", href: publicAsset("favicon.svg") }],
   ],
   themeConfig: {
     search: true,
