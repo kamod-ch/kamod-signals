@@ -28,7 +28,12 @@
     "docs:check": "pnpm run check:docs",
     "docs:build": "pnpm run build:docs",
     "docs:preview": "pnpm --filter @kamod-ch/signals-docs preview",
+    "verify": "pnpm typecheck && pnpm test && pnpm build && pnpm docs:check",
     "pack:core": "pnpm --filter @kamod-ch/signals exec npm pack --dry-run",
-    "publish:core": "pnpm --filter @kamod-ch/signals publish --access public"
+    "publish:core": "pnpm --filter @kamod-ch/signals publish --access public",
+    "release": "node ./scripts/release.mjs patch",
+    "release:minor": "node ./scripts/release.mjs minor",
+    "release:major": "node ./scripts/release.mjs major",
+    "release:dry": "node ./scripts/release.mjs patch --dry"
   }
 }
