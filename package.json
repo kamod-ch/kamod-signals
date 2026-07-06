@@ -21,7 +21,7 @@
     "typecheck:core": "pnpm --filter @kamod-ch/signals typecheck",
     "build:docs": "pnpm --filter @kamod-ch/signals-docs build",
     "check:docs": "pnpm --filter @kamod-ch/signals-docs check",
-    "build": "pnpm run build:core",
+    "build": "pnpm run build:core && pnpm run build:docs",
     "test": "pnpm run test:core",
     "typecheck": "pnpm run typecheck:core",
     "docs:dev": "pnpm --filter @kamod-ch/signals-docs dev",
