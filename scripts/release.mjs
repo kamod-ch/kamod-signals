@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -48,10 +48,32 @@ function output(command, options = {}) {
   }
 }
 
-function readCoreVersion() {
-  const pkg = JSON.parse(readFileSync(path.join(coreDir, "package.json"), "utf8"));
-  return pkg.version;
+function readCorePackage() {
+  return JSON.parse(readFileSync(path.join(coreDir, "package.json"), "utf8"));
 }
+
+function readCoreVersion() {
+  return readCorePackage().version;
+}
+
+function bumpVersion(version, releaseType) {
+  const parts = version.split(".").map((part) => Number(part));
+  if (parts.length !== 3 || parts.some((part) => !Number.isInteger(part) || part < 0)) {
+    fail(`unsupported version format: ${version}`);
+  }
+
+  const [major, minor, patch] = parts;
+  if (releaseType === "major") return `${major + 1}.0.0`;
+  if (releaseType === "minor") return `${major}.${minor + 1}.0`;
+  return `${major}.${minor}.${patch + 1}`;
+}
+
+function writeCoreVersion(version) {
+  const packagePath = path.join(coreDir, "package.json");
+  const pkg = readCorePackage();
+  pkg.version = version;
+  writeFileSync(packagePath, `${JSON.stringify(pkg, null, 2)}\n`);
+} 
 
 function assertNpmLogin() {
   output("npm whoami --registry=https://registry.npmjs.org");
@@ -89,8 +111,9 @@ if (dryRun) {
   process.exit(0);
 }
 
-run(`npm version ${bump} --no-git-tag-version`, { cwd: coreDir });
-const newVersion = readCoreVersion();
+const newVersion = bumpVersion(currentVersion, bump);
+console.log(`\n[release] Bumping @kamod-ch/signals from ${currentVersion} to ${newVersion}`);
+writeCoreVersion(newVersion);
 
 run("git add packages/core/package.json pnpm-lock.yaml");
 run(`git commit -m "chore(core): release v${newVersion}"`);
