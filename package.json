@@ -26,6 +26,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsup",
+    "prepublishOnly": "pnpm test && pnpm typecheck && pnpm build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -39,13 +40,13 @@
     "preact": "^10.0.0"
   },
   "devDependencies": {
-    "@preact/signals": "^2.9.1",
-    "@types/node": "^24.3.0",
-    "jsdom": "^26.1.0",
-    "preact": "^10.27.2",
-    "tsup": "^8.5.0",
-    "typescript": "^5.9.2",
-    "vitest": "^4.0.3"
+    "@preact/signals": "^2.9.2",
+    "@types/node": "^26.1.0",
+    "jsdom": "^29.1.1",
+    "preact": "^10.29.4",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
   },
-  "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319"
+  "packageManager": "pnpm@11.8.0"
 }

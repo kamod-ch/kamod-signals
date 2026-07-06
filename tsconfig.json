@@ -7,6 +7,7 @@
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
     "skipLibCheck": true,
+    "ignoreDeprecations": "6.0",
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "declaration": true,
