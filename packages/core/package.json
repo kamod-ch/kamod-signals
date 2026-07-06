@@ -2,12 +2,25 @@
   "name": "@kamod-ch/signals",
   "version": "1.0.2",
   "description": "Persisted Preact signals with localStorage, sessionStorage, IndexedDB, cookie, and memory drivers.",
+  "keywords": [
+    "preact",
+    "signals",
+    "preact-signals",
+    "state-management",
+    "persistent-state",
+    "localstorage",
+    "sessionstorage",
+    "reactivity",
+    "typescript",
+    "vite",
+    "kamod"
+  ],
   "type": "module",
   "license": "MIT",
   "author": "Klaus Zahiragic <watzak>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kamod-ch/kamod-signals.git",
+    "url": "git+https://github.com/kamod-ch/signals.git",
     "directory": "packages/core"
   },
   "publishConfig": {

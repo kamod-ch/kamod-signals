@@ -12,7 +12,7 @@ export default function StorageExamples() {
   const counter = usePersistedSignal("docs-counter", 1, { storage: "memory" });
   const notes = usePersistedSignal("docs-notes", "draft-a", {
     storage: "indexeddb",
-    indexedDB: { database: "kamod-signals-docs", store: "examples" },
+    indexedDB: { database: "@kamod-ch/signals-docs", store: "examples" },
   });
 
   const sharedA = useMemo(() => persistedSignal("docs-shared", 0, { storage: "memory" }), []);

@@ -51,7 +51,7 @@ const DRIVERS = [
     description: "Async hydration for larger client-side payloads like drafts or offline caches.",
     code: `const draft = persistedSignal("hero-draft", "draft-a", {
   storage: "indexeddb",
-  indexedDB: { database: "kamod-signals-hero", store: "examples" },
+  indexedDB: { database: "@kamod-ch/signals-hero", store: "examples" },
 });`,
     accent: "indexeddb",
   },
@@ -94,7 +94,7 @@ export default function HeroDriverShowcase() {
   const counter = usePersistedSignal("hero-counter", 1, { storage: "memory" });
   const draft = usePersistedSignal("hero-draft", "draft-a", {
     storage: "indexeddb",
-    indexedDB: { database: "kamod-signals-hero", store: "examples" },
+    indexedDB: { database: "@kamod-ch/signals-hero", store: "examples" },
   });
 
   const driver = DRIVERS.find((item) => item.id === active) ?? DRIVERS[0];

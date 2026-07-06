@@ -1,30 +1,28 @@
 <p align="center">
-  <a href="https://kamod-ch.github.io/kamod-signals/">
-    <img src="assets/readme-banner.svg" alt="kamod Signals" height="40" />
-  </a>
+  <img src="assets/readme-banner.svg" alt="Kamod Signals" width="304" />
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@kamod-ch/signals"><img src="https://img.shields.io/npm/v/@kamod-ch/signals" alt="npm version" /></a>
-  <a href="https://github.com/kamod-ch/kamod-signals/actions/workflows/gh-pages.yml"><img src="https://github.com/kamod-ch/kamod-signals/actions/workflows/gh-pages.yml/badge.svg" alt="Docs deploy" /></a>
-  <a href="https://github.com/kamod-ch/kamod-signals/stargazers"><img src="https://img.shields.io/github/stars/kamod-ch/kamod-signals?style=social" alt="GitHub stars" /></a>
-  <a href="https://www.npmjs.com/package/@kamod-ch/signals"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license" /></a>
+  <a href="https://www.npmjs.com/package/@kamod-ch/signals"><img src="https://img.shields.io/npm/v/%40kamod-ch%2Fsignals" alt="npm version" /></a>
+  <a href="https://github.com/kamod-ch/signals/actions/workflows/gh-pages.yml"><img src="https://github.com/kamod-ch/signals/actions/workflows/gh-pages.yml/badge.svg" alt="Docs deploy" /></a>
+  <a href="https://github.com/kamod-ch/signals/stargazers"><img src="https://img.shields.io/github/stars/kamod-ch/signals?style=social" alt="GitHub stars" /></a>
+  <a href="https://github.com/kamod-ch/signals/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license" /></a>
 </p>
 
 <p align="center">
-  <strong><a href="https://kamod-ch.github.io/kamod-signals/">Live docs</a></strong> ·
+  <strong><a href="https://kamod-ch.github.io/signals/">Live docs</a></strong> ·
   <strong><a href="https://www.npmjs.com/package/@kamod-ch/signals">npm</a></strong> ·
-  <strong><a href="https://github.com/kamod-ch/kamod-signals">GitHub</a></strong> ·
-  <strong><a href="https://github.com/kamod-ch/kamod-signals/issues">Issues</a></strong>
+  <strong><a href="https://github.com/kamod-ch/signals">GitHub</a></strong> ·
+  <strong><a href="https://github.com/kamod-ch/signals/issues">Issues</a></strong>
 </p>
 
-> If Kamod Signals saves you time, **[star the repo](https://github.com/kamod-ch/kamod-signals)** — it helps others discover the project.
+> If Kamod Signals saves you time, **[star the repo](https://github.com/kamod-ch/signals)** — it helps others discover the project.
 
 # Kamod Signals
 
-Persisted Preact signals for `localStorage`, `sessionStorage`, IndexedDB, cookies, and memory.
+Monorepo for `@kamod-ch/signals` and the PreactPress documentation site.
 
-`@kamod-ch/signals` is a lightweight helper package for Preact apps that need reactive state with durable storage. It is SSR-safe, supports cookie request contexts, and keeps the familiar `@preact/signals` API.
+`@kamod-ch/signals` is a lightweight helper package for Preact apps that need reactive state with durable storage. It is SSR-safe, supports cookie request contexts, and keeps the familiar `@preact/signals` API for `localStorage`, `sessionStorage`, IndexedDB, cookies, and memory.
 
 ## Structure
 
@@ -35,91 +33,52 @@ packages/docs/  # PreactPress documentation site
 
 ## Install
 
-Install the package in your Preact project:
+Install dependencies from the repository root:
 
 ```bash
-pnpm add @kamod-ch/signals @preact/signals preact
+pnpm install
 ```
 
-## Usage
-
-```ts
-import { persistedSignal, usePersistedSignal } from "@kamod-ch/signals";
-
-export const theme = persistedSignal("theme", "dark", { storage: "local" });
-export const token = persistedSignal("token", "", {
-  storage: "cookie",
-  cookie: { expires: 7, path: "/" },
-});
-
-function Sidebar() {
-  const isOpen = usePersistedSignal("sidebar-open", true, { storage: "session" });
-  return <button onClick={() => (isOpen.value = !isOpen.value)}>Toggle</button>;
-}
-```
-
-## API
-
-```ts
-persistedSignal<T>(key: string, initialValue: T, options?: PersistedSignalOptions<T>): PersistedSignal<T>
-usePersistedSignal<T>(key: string, initialValue: T, options?: PersistedSignalOptions<T>): PersistedSignal<T>
-```
-
-```ts
-type PersistedSignalOptions<T> = {
-  storage?: "local" | "session" | "indexeddb" | "cookie" | "memory";
-  serialize?: (value: T) => string;
-  deserialize?: (raw: string) => T;
-  sync?: boolean;
-  removeOnUndefined?: boolean;
-  indexedDB?: { database?: string; store?: string; version?: number };
-  cookie?: {
-    expires?: number | Date;
-    path?: string;
-    domain?: string;
-    secure?: boolean;
-    sameSite?: "Lax" | "Strict" | "None";
-  };
-  cookieContext?: CookieContext;
-};
-```
-
-## SSR cookie context
-
-```ts
-import { createCookieContext, persistedSignal } from "@kamod-ch/signals";
-
-const cookieContext = createCookieContext({
-  cookie: request.headers,
-  onSetCookie: (header) => response.headers.append("set-cookie", header),
-});
-
-const theme = persistedSignal("theme", "dark", {
-  storage: "cookie",
-  cookieContext,
-  cookie: { path: "/", sameSite: "Lax" },
-});
-```
+The root package uses pnpm workspaces for `packages/*`.
 
 ## Commands
 
 ```bash
-pnpm run build         # build the package
-pnpm run typecheck     # run TypeScript checks
-pnpm run test          # run Vitest tests
-pnpm run docs:dev      # start PreactPress locally
-pnpm run docs:build    # build the docs site
-pnpm run docs:preview  # preview the built docs
+pnpm run build          # build @kamod-ch/signals
+pnpm run build:core     # build only the core package
+pnpm run build:docs     # build only the docs site
+pnpm run test           # run Vitest tests
+pnpm run typecheck      # run TypeScript checks
+pnpm run docs:dev       # start PreactPress locally
+pnpm run docs:check     # run PreactPress checks
+pnpm run docs:build     # build the docs site
+pnpm run docs:preview   # preview the built docs
+pnpm run verify         # typecheck, test, build and check docs
+pnpm run pack:core      # dry-run the published package contents
+pnpm run publish:core   # publish packages/core
 ```
 
-## Notes
+## Local docs
 
-- SSR-safe: browser-only storage is never touched on the server.
-- Cookie SSR works when you pass `cookieContext`, and caching stays scoped to that request context.
-- `local`, `session`, and `indexeddb` fall back to in-memory storage when unavailable.
-- IndexedDB hydration is async, so signals start with `initialValue` and update after the persisted value loads.
-- `persistedSignal()` returns the same signal for the same global identity (`storage + key`, with `cookieContext` scoping for SSR cookies).
-- Reusing that identity requires the same effective options; conflicting options throw instead of being ignored.
+```bash
+pnpm install
+pnpm run docs:dev
+```
+
+The docs live in `packages/docs/` and are configured in `packages/docs/.preactpress/config.ts`.
+
+## Build and verify
+
+```bash
+pnpm run verify
+```
+
+This runs:
+
+1. `pnpm run typecheck`
+2. `pnpm run test`
+3. `pnpm run build`
+4. `pnpm run docs:check`
 
 ---
 
