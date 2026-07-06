@@ -26,6 +26,7 @@ import AlgoliaSearch from "@preactpress-internal/theme-default/AlgoliaSearch.tsx
 import Features from "@preactpress-internal/theme-default/Features.tsx";
 import Hero from "@preactpress-internal/theme-default/Hero.tsx";
 import Logo from "./Logo.js";
+import Footer from "./Footer.js";
 import NavLinks from "@preactpress-internal/theme-default/NavLinks.tsx";
 import SidebarNav from "@preactpress-internal/theme-default/SidebarNav.tsx";
 import SocialLinks from "@preactpress-internal/theme-default/SocialLinks.tsx";
@@ -519,9 +520,7 @@ const Layout: FunctionalComponent<LayoutProps> = ({
         </main>
         {chrome.aside !== 'left' ? outline : null}
       </div>
-      {chrome.showFooter && themeConfig.footer ? (
-        <footer class="pp-footer">{themeConfig.footer}</footer>
-      ) : null}
+      {chrome.showFooter ? <Footer base={site.base} /> : null}
     </div>
   )
 }

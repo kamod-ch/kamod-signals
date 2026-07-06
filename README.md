@@ -4,11 +4,38 @@
   </a>
 </p>
 
-# @kamod-ch/signals
+<p align="center">
+  <a href="https://www.npmjs.com/package/@kamod-ch/signals"><img src="https://img.shields.io/npm/v/@kamod-ch/signals" alt="npm version" /></a>
+  <a href="https://github.com/kamod-ch/kamod-signals/actions/workflows/gh-pages.yml"><img src="https://github.com/kamod-ch/kamod-signals/actions/workflows/gh-pages.yml/badge.svg" alt="Docs deploy" /></a>
+  <a href="https://github.com/kamod-ch/kamod-signals/stargazers"><img src="https://img.shields.io/github/stars/kamod-ch/kamod-signals?style=social" alt="GitHub stars" /></a>
+  <a href="https://www.npmjs.com/package/@kamod-ch/signals"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license" /></a>
+</p>
 
-Persisted Preact signals for localStorage, sessionStorage, IndexedDB, cookies, and memory.
+<p align="center">
+  <strong><a href="https://kamod-ch.github.io/kamod-signals/">Live docs</a></strong> ·
+  <strong><a href="https://www.npmjs.com/package/@kamod-ch/signals">npm</a></strong> ·
+  <strong><a href="https://github.com/kamod-ch/kamod-signals">GitHub</a></strong> ·
+  <strong><a href="https://github.com/kamod-ch/kamod-signals/issues">Issues</a></strong>
+</p>
+
+> If Kamod Signals saves you time, **[star the repo](https://github.com/kamod-ch/kamod-signals)** — it helps others discover the project.
+
+# Kamod Signals
+
+Persisted Preact signals for `localStorage`, `sessionStorage`, IndexedDB, cookies, and memory.
+
+`@kamod-ch/signals` is a lightweight helper package for Preact apps that need reactive state with durable storage. It is SSR-safe, supports cookie request contexts, and keeps the familiar `@preact/signals` API.
+
+## Structure
+
+```txt
+src/   # @kamod-ch/signals source, storage drivers and tests
+docs/  # PreactPress documentation site
+```
 
 ## Install
+
+Install the package in your Preact project:
 
 ```bash
 pnpm add @kamod-ch/signals @preact/signals preact
@@ -38,8 +65,6 @@ persistedSignal<T>(key: string, initialValue: T, options?: PersistedSignalOption
 usePersistedSignal<T>(key: string, initialValue: T, options?: PersistedSignalOptions<T>): PersistedSignal<T>
 ```
 
-### Options
-
 ```ts
 type PersistedSignalOptions<T> = {
   storage?: "local" | "session" | "indexeddb" | "cookie" | "memory";
@@ -47,11 +72,7 @@ type PersistedSignalOptions<T> = {
   deserialize?: (raw: string) => T;
   sync?: boolean;
   removeOnUndefined?: boolean;
-  indexedDB?: {
-    database?: string;
-    store?: string;
-    version?: number;
-  };
+  indexedDB?: { database?: string; store?: string; version?: number };
   cookie?: {
     expires?: number | Date;
     path?: string;
@@ -63,16 +84,7 @@ type PersistedSignalOptions<T> = {
 };
 ```
 
-### Returned signal
-
-```ts
-type PersistedSignal<T> = Signal<T> & {
-  clear(): void; // remove persisted value and restore initialValue
-  reset(): void; // restore initialValue and persist it again
-}
-```
-
-### SSR cookie context
+## SSR cookie context
 
 ```ts
 import { createCookieContext, persistedSignal } from "@kamod-ch/signals";
@@ -89,63 +101,29 @@ const theme = persistedSignal("theme", "dark", {
 });
 ```
 
-`createCookieContext()` accepts:
-- a raw cookie header string
-- a `Headers` instance
-- `{ cookie, onSetCookie }`
+## Commands
 
-Use `cookieContext.toSetCookieHeaders?.()` if you want to collect outgoing `Set-Cookie` values manually.
-
-### Fresh example
-
-```ts
-import { createCookieContext, persistedSignal } from "@kamod-ch/signals";
-import { FreshContext } from "$fresh/server.ts";
-
-export async function handler(req: Request, ctx: FreshContext) {
-  const response = await ctx.render();
-
-  const cookieContext = createCookieContext({
-    cookie: req.headers,
-    onSetCookie: (header) => response.headers.append("set-cookie", header),
-  });
-
-  const theme = persistedSignal("theme", "dark", {
-    storage: "cookie",
-    cookieContext,
-    cookie: { path: "/", sameSite: "Lax" },
-  });
-
-  theme.value = "light";
-  return response;
-}
-```
-
-### Astro example
-
-```ts
----
-import { createCookieContext, persistedSignal } from "@kamod-ch/signals";
-
-const cookieContext = createCookieContext({
-  cookie: Astro.request.headers,
-  onSetCookie: (header) => Astro.response.headers.append("set-cookie", header),
-});
-
-const theme = persistedSignal("theme", "dark", {
-  storage: "cookie",
-  cookieContext,
-  cookie: { path: "/", sameSite: "Lax" },
-});
----
+```bash
+pnpm run build         # build the package
+pnpm run typecheck     # run TypeScript checks
+pnpm run test          # run Vitest tests
+pnpm run docs:dev      # start PreactPress locally
+pnpm run docs:build    # build the docs site
+pnpm run docs:preview  # preview the built docs
 ```
 
 ## Notes
 
 - SSR-safe: browser-only storage is never touched on the server.
 - Cookie SSR works when you pass `cookieContext`, and caching stays scoped to that request context.
-- Different SSR cookie contexts stay isolated, and no explicit cleanup call is required for the documented pattern.
 - `local`, `session`, and `indexeddb` fall back to in-memory storage when unavailable.
 - IndexedDB hydration is async, so signals start with `initialValue` and update after the persisted value loads.
 - `persistedSignal()` returns the same signal for the same global identity (`storage + key`, with `cookieContext` scoping for SSR cookies).
 - Reusing that identity requires the same effective options; conflicting options throw instead of being ignored.
+
+---
+
+Built by Klaus Zahiragic | Kamod GmbH
+
+[Website](https://www.kamod.ch) ·
+[LinkedIn](https://www.linkedin.com/in/klauszahiragic/)
