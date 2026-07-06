@@ -13,14 +13,6 @@ const url = isGithubPagesBuild ? 'https://kamod-ch.github.io' : 'http://localhos
 
 export default defineConfig({
   theme: "./theme/Layout.tsx",
-  vite: {
-    resolve: {
-      alias: [
-        { find: "@preactpress-internal/client", replacement: preactpressClient },
-        { find: "@preactpress-internal/theme-default", replacement: preactpressTheme },
-      ],
-    },
-  },
   srcExclude: ["README.md"],
   site: {
     title: "kamod Signals",
