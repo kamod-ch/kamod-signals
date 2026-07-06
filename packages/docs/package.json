@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prepublishOnly": "node -e \"console.error('Docs are private and must not be published. Publish only packages/core.'); process.exit(1)\"",
     "dev": "preactpress dev",
     "check": "preactpress check",
     "build": "preactpress build --base /kamod-signals/",

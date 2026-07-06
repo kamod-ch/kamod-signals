@@ -15,6 +15,7 @@
     "packages/*"
   ],
   "scripts": {
+    "prepublishOnly": "node -e \"console.error('Do not publish the workspace root. Use: pnpm publish:core'); process.exit(1)\"",
     "build:core": "pnpm --filter @kamod-ch/signals build",
     "test:core": "pnpm --filter @kamod-ch/signals test",
     "typecheck:core": "pnpm --filter @kamod-ch/signals typecheck",
@@ -26,6 +27,8 @@
     "docs:dev": "pnpm --filter @kamod-ch/signals-docs dev",
     "docs:check": "pnpm run check:docs",
     "docs:build": "pnpm run build:docs",
-    "docs:preview": "pnpm --filter @kamod-ch/signals-docs preview"
+    "docs:preview": "pnpm --filter @kamod-ch/signals-docs preview",
+    "pack:core": "pnpm --filter @kamod-ch/signals exec npm pack --dry-run",
+    "publish:core": "pnpm --filter @kamod-ch/signals publish --access public"
   }
 }
