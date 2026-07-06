@@ -4,13 +4,13 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@kamod-ch/signals"><img src="https://img.shields.io/npm/v/%40kamod-ch%2Fsignals" alt="npm version" /></a>
-  <a href="https://github.com/kamod-ch/signals/actions/workflows/gh-pages.yml"><img src="https://github.com/kamod-ch/signals/actions/workflows/gh-pages.yml/badge.svg" alt="Docs deploy" /></a>
+  <a href="https://github.com/kamod-ch/kamod-signals/actions/workflows/gh-pages.yml"><img src="https://github.com/kamod-ch/kamod-signals/actions/workflows/gh-pages.yml/badge.svg" alt="Docs deploy" /></a>
   <a href="https://github.com/kamod-ch/signals/stargazers"><img src="https://img.shields.io/github/stars/kamod-ch/signals?style=social" alt="GitHub stars" /></a>
   <a href="https://github.com/kamod-ch/signals/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license" /></a>
 </p>
 
 <p align="center">
-  <strong><a href="https://kamod-ch.github.io/signals/">Live docs</a></strong> ·
+  <strong><a href="https://kamod-ch.github.io/kamod-signals/">Live docs</a></strong> ·
   <strong><a href="https://www.npmjs.com/package/@kamod-ch/signals">npm</a></strong> ·
   <strong><a href="https://github.com/kamod-ch/signals">GitHub</a></strong> ·
   <strong><a href="https://github.com/kamod-ch/signals/issues">Issues</a></strong>

@@ -32,10 +32,10 @@ export default defineConfig({
     emoji: true,
   },
   head: [
-    ["link", { rel: "icon", href: "/signals/favicon.svg", type: "image/svg+xml" }],
-    ["link", { rel: "icon", href: "/signals/favicon-32.png", type: "image/png", sizes: "32x32" }],
-    ["link", { rel: "icon", href: "/signals/favicon.png", type: "image/png", sizes: "any" }],
-    ["link", { rel: "apple-touch-icon", href: "/signals/favicon.png" }],
+    ["link", { rel: "icon", href: "/kamod-signals/favicon.svg", type: "image/svg+xml" }],
+    ["link", { rel: "icon", href: "/kamod-signals/favicon-32.png", type: "image/png", sizes: "32x32" }],
+    ["link", { rel: "icon", href: "/kamod-signals/favicon.png", type: "image/png", sizes: "any" }],
+    ["link", { rel: "apple-touch-icon", href: "/kamod-signals/favicon.png" }],
   ],
   themeConfig: {
     search: true,
