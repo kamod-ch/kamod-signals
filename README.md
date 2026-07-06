@@ -29,8 +29,8 @@ Persisted Preact signals for `localStorage`, `sessionStorage`, IndexedDB, cookie
 ## Structure
 
 ```txt
-src/   # @kamod-ch/signals source, storage drivers and tests
-docs/  # PreactPress documentation site
+packages/core/  # @kamod-ch/signals package source, storage drivers and tests
+packages/docs/  # PreactPress documentation site
 ```
 
 ## Install

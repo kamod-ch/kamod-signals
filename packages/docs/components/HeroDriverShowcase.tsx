@@ -1,5 +1,5 @@
 import { useState } from "preact/hooks";
-import { usePersistedSignal } from "../../src/index.ts";
+import { usePersistedSignal } from "@kamod-ch/signals";
 import { pretty } from "./DemoCard.tsx";
 
 const DRIVERS = [

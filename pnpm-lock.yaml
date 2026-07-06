@@ -6,7 +6,9 @@ settings:
 
 importers:
 
-  .:
+  .: {}
+
+  packages/core:
     devDependencies:
       '@preact/signals':
         specifier: ^2.9.2
@@ -30,11 +32,11 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.1.0)(jsdom@29.1.1)(vite@8.1.0(@types/node@26.1.0)(esbuild@0.27.7))
 
-  docs:
+  packages/docs:
     dependencies:
       '@kamod-ch/signals':
         specifier: workspace:*
-        version: link:..
+        version: link:../core
     devDependencies:
       '@kamod-ch/preactpress':
         specifier: ^1.0.0
@@ -2456,7 +2458,7 @@ snapshots:
     dependencies:
       '@types/estree': 1.0.9
       estree-walker: 2.0.2
-      picomatch: 4.0.4
+      picomatch: 4.0.5
     optionalDependencies:
       rollup: 4.62.2
 
@@ -3988,7 +3990,7 @@ snapshots:
   vite@8.1.0(@types/node@26.1.0)(esbuild@0.27.7):
     dependencies:
       lightningcss: 1.32.0
-      picomatch: 4.0.4
+      picomatch: 4.0.5
       postcss: 8.5.15
       rolldown: 1.1.2
       tinyglobby: 0.2.17

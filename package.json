@@ -1,52 +1,31 @@
 {
-  "name": "@kamod-ch/signals",
+  "name": "kamod-signals",
   "version": "0.1.0",
+  "private": true,
   "description": "Persisted Preact signals with localStorage, sessionStorage, IndexedDB, cookie, and memory drivers.",
-  "type": "module",
   "license": "MIT",
   "author": "Klaus Zahiragic <watzak>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kamod-ch/kamod-signals.git"
   },
-  "publishConfig": {
-    "access": "public"
-  },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
-  },
-  "files": [
-    "dist"
+  "type": "module",
+  "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319",
+  "workspaces": [
+    "packages/*"
   ],
-  "sideEffects": false,
   "scripts": {
-    "build": "tsup",
-    "prepublishOnly": "pnpm test && pnpm typecheck && pnpm build",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "docs:dev": "pnpm --dir docs dev",
-    "docs:check": "pnpm --dir docs check",
-    "docs:build": "pnpm --dir docs build",
-    "docs:preview": "pnpm --dir docs preview"
-  },
-  "peerDependencies": {
-    "@preact/signals": "^2.0.0",
-    "preact": "^10.0.0"
-  },
-  "devDependencies": {
-    "@preact/signals": "^2.9.2",
-    "@types/node": "^26.1.0",
-    "jsdom": "^29.1.1",
-    "preact": "^10.29.4",
-    "tsup": "^8.5.1",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.10"
-  },
-  "packageManager": "pnpm@11.8.0"
+    "build:core": "pnpm --filter @kamod-ch/signals build",
+    "test:core": "pnpm --filter @kamod-ch/signals test",
+    "typecheck:core": "pnpm --filter @kamod-ch/signals typecheck",
+    "build:docs": "pnpm --filter @kamod-ch/signals-docs build",
+    "check:docs": "pnpm --filter @kamod-ch/signals-docs check",
+    "build": "pnpm run build:core",
+    "test": "pnpm run test:core",
+    "typecheck": "pnpm run typecheck:core",
+    "docs:dev": "pnpm --filter @kamod-ch/signals-docs dev",
+    "docs:check": "pnpm run check:docs",
+    "docs:build": "pnpm run build:docs",
+    "docs:preview": "pnpm --filter @kamod-ch/signals-docs preview"
+  }
 }
