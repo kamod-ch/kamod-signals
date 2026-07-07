@@ -39,6 +39,11 @@ jobs:
 
       - name: Build docs
         run: pnpm docs:build
+        env:
+          KAMOD_DOCS_BASE: github-pages
+
+      - name: Add .nojekyll
+        run: touch packages/docs/dist/.nojekyll
 
       - name: Add Matomo image tracker
         run: |

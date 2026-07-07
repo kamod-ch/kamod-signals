@@ -1,5 +1,12 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "@kamod-ch/preactpress/config";
 
+const configDir = path.dirname(fileURLToPath(import.meta.url));
+const docsRoot = path.resolve(configDir, "..");
+const preactpressPackage = path.resolve(docsRoot, "node_modules/@kamod-ch/preactpress");
+const preactpressClient = path.join(preactpressPackage, "src/client");
+const preactpressTheme = path.join(preactpressClient, "theme-default");
 
 const matomoImageTracker =
   '<!-- Matomo Image Tracker--><img referrerpolicy="no-referrer-when-downgrade" src="https://matomo.kamod.ch/matomo.php?idsite=8&amp;rec=1" style="border:0" alt="" /><!-- End Matomo -->'
@@ -13,6 +20,14 @@ const url = isGithubPagesBuild ? 'https://kamod-ch.github.io' : 'http://localhos
 
 export default defineConfig({
   theme: "./theme/Layout.tsx",
+  vite: {
+    resolve: {
+      alias: [
+        { find: "@preactpress-internal/client", replacement: preactpressClient },
+        { find: "@preactpress-internal/theme-default", replacement: preactpressTheme },
+      ],
+    },
+  },
   srcExclude: ["README.md"],
   site: {
     title: "kamod Signals",
@@ -25,8 +40,8 @@ export default defineConfig({
     emoji: true,
   },
   head: [
-    ["link", { rel: "icon", href: publicAsset("favicon.svg"), type: "image/svg+xml" }],
-    ["link", { rel: "apple-touch-icon", href: publicAsset("favicon.svg") }],
+    ["link", { rel: "icon", href: `${base}favicon.svg`, type: "image/svg+xml" }],
+    ["link", { rel: "apple-touch-icon", href: `${base}favicon.svg` }],
   ],
   transformHtml(html) {
     if (!includeMatomoImageTracker) return html
