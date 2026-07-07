@@ -13,7 +13,8 @@
     "@kamod-ch/signals": "workspace:*"
   },
   "devDependencies": {
-    "@kamod-ch/preactpress": "^1.0.0",
+    "@kamod-ch/preactpress": "^2.0.0",
+    "preact": "^10.29.3",
     "typescript": "^6.0.3"
   }
 }
