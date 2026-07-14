@@ -54,8 +54,8 @@ export default defineConfig({
     socialLinks: [
       {
         icon: "github",
-        link: "https://github.com/kamod-ch/signals",
-        ariaLabel: "kamod-ch/signals on GitHub",
+        link: "https://github.com/kamod-ch/kamod-signals",
+        ariaLabel: "@kamod-ch/signals",
       },
     ],
     nav: [
