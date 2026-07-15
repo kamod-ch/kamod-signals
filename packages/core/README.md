@@ -18,9 +18,9 @@
 
 # @kamod-ch/signals
 
-Persisted Preact signals for `localStorage`, `sessionStorage`, IndexedDB, cookies, and memory.
+Persisted Preact signals and models for `localStorage`, `sessionStorage`, IndexedDB, cookies, and memory.
 
-`@kamod-ch/signals` is a lightweight helper package for Preact apps that need reactive state with durable storage. It is SSR-safe, supports cookie request contexts, and keeps the familiar `@preact/signals` API.
+`@kamod-ch/signals` is a lightweight helper package for Preact apps that need reactive client state with durable storage. It is SSR-safe, supports cookie request contexts, request-local hydration scopes, cross-tab persisted model sync, and re-exports the official `@preact/signals` model/action APIs.
 
 ## Keywords
 
@@ -72,7 +72,13 @@ export const token = persistedSignal("token", "", {
 ```ts
 persistedSignal<T>(key: string, initialValue: T, options?: PersistedSignalOptions<T>): PersistedSignal<T>
 usePersistedSignal<T>(key: string, initialValue: T, options?: PersistedSignalOptions<T>): PersistedSignal<T>
+createPersistedModel(options, factory)
+createPersistedScope(options?)
+dehydratePersisted(scope)
+hydratePersisted(state)
 ```
+
+Official Preact Signals primitives such as `signal`, `computed`, `effect`, `batch`, `untracked`, `createModel`, `action`, and `useModel` are re-exported.
 
 ```ts
 type PersistedSignalOptions<T> = {

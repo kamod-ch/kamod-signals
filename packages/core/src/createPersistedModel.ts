@@ -173,6 +173,9 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
       }
 
       try {
+        if (options.version !== undefined) {
+          emitPersistedEvent(options.events, { ...eventBase(), type: "migrate:start" });
+        }
         const parsed = await deserializePersistedValueAsync(raw, options, deserialize);
         persistenceBlocked = false;
         await applySnapshot(parsed.value);
