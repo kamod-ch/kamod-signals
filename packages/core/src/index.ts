@@ -1,3 +1,15 @@
+export {
+  Signal,
+  action,
+  batch,
+  computed,
+  createModel,
+  effect,
+  signal,
+  untracked,
+  useModel,
+} from "@preact/signals";
+export type { Model, ModelConstructor, ReadonlySignal } from "@preact/signals";
 export type {
   CookieContext,
   CookieOptions,

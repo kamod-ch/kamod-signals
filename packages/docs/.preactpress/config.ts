@@ -60,6 +60,7 @@ export default defineConfig({
     ],
     nav: [
       { text: "Guide", link: "/guide/getting-started" },
+      { text: "Models", link: "/guide/models-and-actions" },
       { text: "API", link: "/guide/api" },
       { text: "Examples", link: "/examples/storage-showcase" },
     ],
@@ -69,6 +70,7 @@ export default defineConfig({
         items: [
           { text: "Overview", link: "/" },
           { text: "Getting started", link: "/guide/getting-started" },
+          { text: "Models and actions", link: "/guide/models-and-actions" },
           { text: "API", link: "/guide/api" },
           { text: "Architecture ADR", link: "/architecture/persisted-signals-state-layer-adr" },
         ],

@@ -1,9 +1,20 @@
 import { h, render } from "preact";
 import { act } from "preact/test-utils";
-import { createCookieContext } from "./drivers";
-import { __private__, persistedSignal } from "./persistedSignal";
+import {
+  action,
+  computed,
+  createCookieContext,
+  createModel,
+  effect,
+  persistedSignal,
+  signal,
+  useModel,
+  usePersistedSignal,
+  type Model,
+  type ModelConstructor,
+} from ".";
+import { __private__ } from "./persistedSignal";
 import type { PersistedSignal, PersistedSignalOptions } from "./types";
-import { usePersistedSignal } from "./usePersistedSignal";
 
 const installIndexedDbPolyfill = () => {
   if (typeof indexedDB !== "undefined") {
@@ -493,6 +504,157 @@ describe("persistedSignal", () => {
 
     first.dispose();
     second.dispose();
+  });
+});
+
+type Expect<T extends true> = T;
+type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
+
+const renderModelHook = <TModel,>(factory: () => Model<TModel>) => {
+  let currentModel: Model<TModel> | undefined;
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+
+  const TestComponent = () => {
+    currentModel = useModel(factory);
+    return null;
+  };
+
+  return {
+    mount: async () => {
+      await act(async () => {
+        render(h(TestComponent, {}), container);
+      });
+      await flushEffects();
+      if (!currentModel) {
+        throw new Error("Hook did not produce a model");
+      }
+      return currentModel;
+    },
+    unmount: async () => {
+      await act(async () => {
+        render(null, container);
+      });
+      await flushEffects();
+      container.remove();
+    },
+  };
+};
+
+describe("Preact Signals model re-exports", () => {
+  it("creates models through the upstream createModel API", () => {
+    const CounterModel = createModel((initialCount: number) => {
+      const count = signal(initialCount);
+      const doubled = computed(() => count.value * 2);
+
+      return {
+        count,
+        doubled,
+        increment() {
+          count.value += 1;
+        },
+      };
+    });
+
+    const counter = new CounterModel(2);
+
+    expect(counter.count.value).toBe(2);
+    expect(counter.doubled.value).toBe(4);
+
+    counter.increment();
+
+    expect(counter.count.value).toBe(3);
+    expect(counter.doubled.value).toBe(6);
+
+    counter[Symbol.dispose]();
+  });
+
+  it("exports action and batches updates with computed model values", () => {
+    const updateBoth = action((left: ReturnType<typeof signal<number>>, right: ReturnType<typeof signal<number>>) => {
+      left.value = 2;
+      right.value = 3;
+    });
+    const PairModel = createModel(() => {
+      const left = signal(0);
+      const right = signal(0);
+      const total = computed(() => left.value + right.value);
+
+      return { left, right, total, updateBoth };
+    });
+    const pair = new PairModel();
+
+    pair.updateBoth(pair.left, pair.right);
+
+    expect(pair.total.value).toBe(5);
+
+    pair[Symbol.dispose]();
+  });
+
+  it("disposes model effects when useModel unmounts", async () => {
+    const source = signal(0);
+    let runs = 0;
+    let cleanups = 0;
+    const EffectModel = createModel(() => {
+      const disposeEffect = effect(() => {
+        source.value;
+        runs += 1;
+        return () => {
+          cleanups += 1;
+        };
+      });
+
+      return {
+        source,
+        disposeEffect,
+      };
+    });
+    const hook = renderModelHook(() => new EffectModel());
+
+    await hook.mount();
+    expect(runs).toBe(1);
+
+    await hook.unmount();
+    source.value += 1;
+
+    expect(cleanups).toBeGreaterThanOrEqual(1);
+    expect(runs).toBe(1);
+  });
+
+  it("keeps initialization argument and model return types inferred", () => {
+    const PreferencesModel = createModel((theme: "light" | "dark", density = 1) => {
+      const selectedTheme = signal(theme);
+      const selectedDensity = signal(density);
+      const label = computed(() => `${selectedTheme.value}:${selectedDensity.value}`);
+
+      return {
+        selectedTheme,
+        selectedDensity,
+        label,
+        setTheme(value: "light" | "dark") {
+          selectedTheme.value = value;
+        },
+      };
+    });
+
+    const preferences = new PreferencesModel("dark", 2);
+    preferences.setTheme("light");
+
+    expect(preferences.label.value).toBe("light:2");
+
+    type ThemeCheck = Expect<Equal<InstanceType<typeof PreferencesModel>["selectedTheme"]["value"], "light" | "dark">>;
+    const _themeCheck: ThemeCheck = true;
+    const _constructor: ModelConstructor<{
+      selectedTheme: ReturnType<typeof signal<"light" | "dark">>;
+      selectedDensity: ReturnType<typeof signal<number>>;
+      label: ReturnType<typeof computed<string>>;
+      setTheme(value: "light" | "dark"): void;
+    }, ["light" | "dark", number?]> = PreferencesModel;
+    const _constructedWithInferredArgs = new PreferencesModel("dark", 2);
+    const _themeValue: "light" | "dark" = _constructedWithInferredArgs.selectedTheme.value;
+    expect(_themeCheck).toBe(true);
+    expect(typeof _constructor).toBe("function");
+
+    preferences[Symbol.dispose]();
   });
 });
 
