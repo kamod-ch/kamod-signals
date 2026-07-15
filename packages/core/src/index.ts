@@ -19,5 +19,13 @@ export type {
   PersistedStorage,
 } from "./types";
 export { createCookieContext, serializeCookie } from "./drivers";
+export { createPersistedModel } from "./createPersistedModel";
+export type {
+  HydrationStatus,
+  MaybePromise,
+  PersistedModel,
+  PersistedModelControls,
+  PersistedModelOptions,
+} from "./createPersistedModel";
 export { persistedSignal } from "./persistedSignal";
 export { usePersistedSignal } from "./usePersistedSignal";

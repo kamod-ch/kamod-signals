@@ -171,23 +171,20 @@ Proposed API:
 type MaybePromise<T> = T | Promise<T>;
 type HydrationStatus = "idle" | "loading" | "ready" | "error";
 
-type PersistedModelOptions<TModel, TSnapshot> = {
+type PersistedModelOptions<TModel extends object, TSnapshot> = {
   key: string;
   storage?: PersistedStorage;
   serialize?: (snapshot: TSnapshot) => string;
   deserialize?: (raw: string) => TSnapshot;
-  select: (model: TModel) => TSnapshot;
-  apply?: (model: TModel, snapshot: TSnapshot) => MaybePromise<void>;
-  version?: number;
-  migrate?: (snapshot: unknown, fromVersion: number) => MaybePromise<TSnapshot>;
-  validate?: (snapshot: unknown) => snapshot is TSnapshot;
-  sync?: false | "tabs" | PersistedSyncTransport;
+  select: (model: Model<TModel>) => TSnapshot;
+  apply: (model: Model<TModel>, snapshot: TSnapshot) => MaybePromise<void>;
+  sync?: boolean;
   cookie?: CookieOptions;
   cookieContext?: CookieContext;
   indexedDB?: IndexedDBOptions;
 };
 
-type PersistedModel<TModel> = Model<TModel> & {
+type PersistedModelControls = {
   readonly hydration: ReadonlySignal<HydrationStatus>;
   readonly error: ReadonlySignal<unknown | null>;
   hydrate(): Promise<void>;
@@ -196,13 +193,15 @@ type PersistedModel<TModel> = Model<TModel> & {
   dispose(): void;
 };
 
-declare function createPersistedModel<TModel, TSnapshot, TArgs extends unknown[]>(
-  options: PersistedModelOptions<Model<TModel>, TSnapshot>,
+type PersistedModel<TModel extends object> = Model<TModel & PersistedModelControls>;
+
+declare function createPersistedModel<TModel extends object, TSnapshot, TArgs extends unknown[]>(
+  options: PersistedModelOptions<TModel, TSnapshot>,
   factory: (...args: TArgs) => TModel,
-): ModelConstructor<PersistedModel<TModel>, TArgs>;
+): ModelConstructor<TModel & PersistedModelControls, TArgs>;
 ```
 
-Open design item: whether `apply` is required or can be derived from a structured `state` mapping. The implementation must avoid uncontrolled recursive object traversal.
+`select` and `apply` are intentionally explicit. The implementation must avoid uncontrolled recursive object traversal.
 
 ### Versioning and migrations
 

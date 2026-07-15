@@ -71,6 +71,7 @@ export default defineConfig({
           { text: "Overview", link: "/" },
           { text: "Getting started", link: "/guide/getting-started" },
           { text: "Models and actions", link: "/guide/models-and-actions" },
+          { text: "Persisted models", link: "/guide/persisted-models" },
           { text: "API", link: "/guide/api" },
           { text: "Architecture ADR", link: "/architecture/persisted-signals-state-layer-adr" },
         ],

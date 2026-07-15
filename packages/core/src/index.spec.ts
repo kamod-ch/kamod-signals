@@ -5,6 +5,7 @@ import {
   computed,
   createCookieContext,
   createModel,
+  createPersistedModel,
   effect,
   persistedSignal,
   signal,
@@ -655,6 +656,235 @@ describe("Preact Signals model re-exports", () => {
     expect(typeof _constructor).toBe("function");
 
     preferences[Symbol.dispose]();
+  });
+});
+
+const createPreferencesModel = (key: string) =>
+  createPersistedModel(
+    {
+      key,
+      storage: "memory",
+      select(model) {
+        return {
+          theme: model.theme.value,
+          density: model.density.value,
+        };
+      },
+      apply(model, snapshot: { theme: "light" | "dark"; density: "compact" | "comfortable" }) {
+        model.theme.value = snapshot.theme;
+        model.density.value = snapshot.density;
+      },
+    },
+    () => {
+      const theme = signal<"light" | "dark">("light");
+      const density = signal<"compact" | "comfortable">("comfortable");
+      const isDark = computed(() => theme.value === "dark");
+
+      return {
+        theme,
+        density,
+        isDark,
+        setTheme(value: "light" | "dark") {
+          theme.value = value;
+        },
+        setDensity(value: "compact" | "comfortable") {
+          density.value = value;
+        },
+      };
+    },
+  );
+
+describe("createPersistedModel", () => {
+  it("uses default model state when no stored value exists", async () => {
+    const key = `persisted-model-${Date.now()}-defaults`;
+    const PreferencesModel = createPreferencesModel(key);
+    const preferences = new PreferencesModel();
+
+    await vi.waitFor(() => expect(preferences.hydration.value).toBe("ready"));
+
+    expect(preferences.theme.value).toBe("light");
+    expect(preferences.density.value).toBe("comfortable");
+    expect(__private__.drivers.memory.get(key, { storage: "memory" })).toBeNull();
+
+    preferences.dispose();
+  });
+
+  it("hydrates from an existing stored snapshot", async () => {
+    const key = `persisted-model-${Date.now()}-hydrate`;
+    await __private__.drivers.memory.set(key, JSON.stringify({ theme: "dark", density: "compact" }), {
+      storage: "memory",
+    });
+    const PreferencesModel = createPreferencesModel(key);
+    const preferences = new PreferencesModel();
+
+    await vi.waitFor(() => expect(preferences.hydration.value).toBe("ready"));
+
+    expect(preferences.theme.value).toBe("dark");
+    expect(preferences.density.value).toBe("compact");
+    expect(preferences.isDark.value).toBe(true);
+
+    preferences.dispose();
+  });
+
+  it("persists selected state after an action", async () => {
+    const key = `persisted-model-${Date.now()}-persist`;
+    const PreferencesModel = createPreferencesModel(key);
+    const preferences = new PreferencesModel();
+    await vi.waitFor(() => expect(preferences.hydration.value).toBe("ready"));
+
+    preferences.setTheme("dark");
+
+    await vi.waitFor(async () => {
+      expect(__private__.drivers.memory.get(key, { storage: "memory" })).toBe(
+        JSON.stringify({ theme: "dark", density: "comfortable" }),
+      );
+    });
+
+    preferences.dispose();
+  });
+
+  it("does not serialize computed values or functions", async () => {
+    const key = `persisted-model-${Date.now()}-selected-only`;
+    const PreferencesModel = createPreferencesModel(key);
+    const preferences = new PreferencesModel();
+    await vi.waitFor(() => expect(preferences.hydration.value).toBe("ready"));
+
+    preferences.setTheme("dark");
+
+    await vi.waitFor(async () => {
+      const raw = await __private__.drivers.memory.get(key, { storage: "memory" });
+      expect(raw).toBe(JSON.stringify({ theme: "dark", density: "comfortable" }));
+      expect(raw).not.toContain("isDark");
+      expect(raw).not.toContain("setTheme");
+    });
+
+    preferences.dispose();
+  });
+
+  it("hydrates asynchronously from IndexedDB", async () => {
+    const key = `persisted-model-${Date.now()}-indexeddb`;
+    const database = `persisted-model-${Date.now()}-db`;
+    await __private__.drivers.indexeddb.set(key, JSON.stringify({ theme: "dark", density: "compact" }), {
+      storage: "indexeddb",
+      indexedDB: { database },
+    });
+    const PreferencesModel = createPersistedModel(
+      {
+        key,
+        storage: "indexeddb",
+        indexedDB: { database },
+        select: (model) => ({ theme: model.theme.value, density: model.density.value }),
+        apply(model, snapshot: { theme: "light" | "dark"; density: "compact" | "comfortable" }) {
+          model.theme.value = snapshot.theme;
+          model.density.value = snapshot.density;
+        },
+      },
+      () => ({
+        theme: signal<"light" | "dark">("light"),
+        density: signal<"compact" | "comfortable">("comfortable"),
+      }),
+    );
+    const preferences = new PreferencesModel();
+
+    expect(preferences.theme.value).toBe("light");
+    await vi.waitFor(() => expect(preferences.hydration.value).toBe("ready"));
+    expect(preferences.theme.value).toBe("dark");
+    expect(preferences.density.value).toBe("compact");
+
+    preferences.dispose();
+  });
+
+  it("reports async hydration errors without unhandled rejections", async () => {
+    const key = `persisted-model-${Date.now()}-error`;
+    const originalGet = __private__.drivers.memory.get;
+    const originalAsync = __private__.drivers.memory.async;
+    Object.defineProperty(__private__.drivers.memory, "async", { configurable: true, value: true });
+    __private__.drivers.memory.get = () => Promise.reject(new Error("read failed"));
+
+    try {
+      const PreferencesModel = createPreferencesModel(key);
+      const preferences = new PreferencesModel();
+
+      await vi.waitFor(() => expect(preferences.hydration.value).toBe("error"));
+      expect(preferences.error.value).toBeInstanceOf(Error);
+
+      preferences.dispose();
+    } finally {
+      __private__.drivers.memory.get = originalGet;
+      Object.defineProperty(__private__.drivers.memory, "async", { configurable: true, value: originalAsync });
+    }
+  });
+
+  it("supports reset, flush, and dispose", async () => {
+    const key = `persisted-model-${Date.now()}-controls`;
+    const PreferencesModel = createPreferencesModel(key);
+    const preferences = new PreferencesModel();
+    await vi.waitFor(() => expect(preferences.hydration.value).toBe("ready"));
+
+    preferences.setTheme("dark");
+    await preferences.flush();
+    expect(__private__.drivers.memory.get(key, { storage: "memory" })).toBe(
+      JSON.stringify({ theme: "dark", density: "comfortable" }),
+    );
+
+    await preferences.reset();
+    expect(preferences.theme.value).toBe("light");
+    expect(__private__.drivers.memory.get(key, { storage: "memory" })).toBe(
+      JSON.stringify({ theme: "light", density: "comfortable" }),
+    );
+
+    preferences.dispose();
+    preferences.setTheme("dark");
+    await Promise.resolve();
+    expect(__private__.drivers.memory.get(key, { storage: "memory" })).toBe(
+      JSON.stringify({ theme: "light", density: "comfortable" }),
+    );
+  });
+
+  it("keeps independent model instances isolated by key", async () => {
+    const FirstModel = createPreferencesModel(`persisted-model-${Date.now()}-first`);
+    const SecondModel = createPreferencesModel(`persisted-model-${Date.now()}-second`);
+    const first = new FirstModel();
+    const second = new SecondModel();
+    await vi.waitFor(() => expect(first.hydration.value).toBe("ready"));
+    await vi.waitFor(() => expect(second.hydration.value).toBe("ready"));
+
+    first.setTheme("dark");
+
+    expect(first.theme.value).toBe("dark");
+    expect(second.theme.value).toBe("light");
+
+    first.dispose();
+    second.dispose();
+  });
+
+  it("can be created when browser globals are unavailable", async () => {
+    const originalWindow = globalThis.window;
+    const originalDocument = globalThis.document;
+    Reflect.deleteProperty(globalThis, "window");
+    Reflect.deleteProperty(globalThis, "document");
+
+    try {
+      const PreferencesModel = createPersistedModel(
+        {
+          key: `persisted-model-${Date.now()}-ssr`,
+          storage: "memory",
+          sync: false,
+          select: (model) => ({ theme: model.theme.value }),
+          apply(model, snapshot: { theme: "light" | "dark" }) {
+            model.theme.value = snapshot.theme;
+          },
+        },
+        () => ({ theme: signal<"light" | "dark">("light") }),
+      );
+      const preferences = new PreferencesModel();
+      await vi.waitFor(() => expect(preferences.hydration.value).toBe("ready"));
+      expect(preferences.theme.value).toBe("light");
+      preferences.dispose();
+    } finally {
+      Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+      Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument });
+    }
   });
 });
 

@@ -14,10 +14,12 @@ A quick reference for the main functions, options, and runtime behavior.
 ```ts
 persistedSignal<T>(key: string, initialValue: T, options?: PersistedSignalOptions<T>): PersistedSignal<T>
 usePersistedSignal<T>(key: string, initialValue: T, options?: PersistedSignalOptions<T>): PersistedSignal<T>
+createPersistedModel<TModel, TSnapshot, TArgs>(options, factory): ModelConstructor<TModel & PersistedModelControls, TArgs>
 ```
 
 - Use `persistedSignal()` for shared signals across modules.
 - Use `usePersistedSignal()` inside components.
+- Use `createPersistedModel()` for a typed, explicitly selected persisted snapshot of a Preact Signals model.
 
 ## Quick examples
 
@@ -112,8 +114,27 @@ IndexedDB-backed signals do not block render. They start with `initialValue` and
 
 Use `cookieContext` only when the server must read or write the cookie during SSR.
 
+## Model APIs
+
+`@kamod-ch/signals` also re-exports official Preact Signals model primitives:
+
+```ts
+signal
+computed
+effect
+batch
+untracked
+action
+createModel
+useModel
+```
+
+See [Models and actions](/guide/models-and-actions) and [Persisted models](/guide/persisted-models).
+
 ## Related pages
 
 - [Getting started](/guide/getting-started)
+- [Models and actions](/guide/models-and-actions)
+- [Persisted models](/guide/persisted-models)
 - [Storage showcase](/examples/storage-showcase)
 - [Cookie SSR](/examples/cookie-ssr)
