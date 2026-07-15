@@ -19,6 +19,7 @@ createPersistedScope(options?): PersistedScope
 dehydratePersisted(scope): PersistedDehydratedState
 hydratePersisted(state): void
 serializePersistedStateForHtml(state): string
+createBroadcastSyncTransport(channel): PersistedSyncTransport | null
 ```
 
 - Use `persistedSignal()` for shared signals across modules.
@@ -75,6 +76,7 @@ type PersistedSignalOptions<T> = {
 | `indexedDB` | IndexedDB-specific settings | multi-db or multi-store setups |
 | `version` / `migrate` / `validate` | evolve persisted payloads safely | schema changes |
 | `scope` | request-local SSR collection and hydration | Preact SSR, Hono, edge runtimes |
+| `sync: "tabs"` | opt-in persisted model cross-tab sync | preferences shared across tabs |
 | `cookie` | cookie-specific settings | SSR-visible values |
 | `cookieContext` | server-aware cookie access during SSR | Astro, Fresh, middleware, SSR routes |
 
@@ -151,5 +153,6 @@ See [Models and actions](/guide/models-and-actions), [Persisted models](/guide/p
 - [Persisted models](/guide/persisted-models)
 - [Versioning and migrations](/guide/versioning-and-migrations)
 - [SSR and hydration](/guide/ssr-and-hydration)
+- [Cross-tab sync](/guide/cross-tab-sync)
 - [Storage showcase](/examples/storage-showcase)
 - [Cookie SSR](/examples/cookie-ssr)

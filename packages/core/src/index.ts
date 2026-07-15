@@ -38,6 +38,13 @@ export {
   type PersistedScopeOptions,
 } from "./ssr";
 export {
+  comparePersistedSyncMessages,
+  createBroadcastSyncTransport,
+  createMemorySyncTransport,
+  type PersistedSyncMessage,
+  type PersistedSyncTransport,
+} from "./sync";
+export {
   FuturePersistedVersionError,
   PersistedValidationError,
   isPersistedEnvelope,

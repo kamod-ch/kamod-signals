@@ -9,6 +9,13 @@ import {
 import { resolveDriver } from "./drivers";
 import { defaultDeserialize, defaultSerialize, resolveStorageType } from "./shared";
 import { consumeHydratedPersistedValue, type PersistedScope } from "./ssr";
+import {
+  comparePersistedSyncMessages,
+  createBroadcastSyncTransport,
+  createPersistedSyncSource,
+  type PersistedSyncMessage,
+  type PersistedSyncTransport,
+} from "./sync";
 import type { CookieContext, CookieOptions, IndexedDBOptions, PersistedSignalOptions, PersistedStorage } from "./types";
 import {
   FuturePersistedVersionError,
@@ -28,7 +35,7 @@ export interface PersistedModelOptions<TModel extends object, TSnapshot> {
   deserialize?: (raw: string) => TSnapshot;
   select: (model: Model<TModel>) => TSnapshot;
   apply: (model: Model<TModel>, snapshot: TSnapshot) => MaybePromise<void>;
-  sync?: boolean;
+  sync?: boolean | "tabs" | PersistedSyncTransport<TSnapshot>;
   cookie?: CookieOptions;
   cookieContext?: CookieContext;
   indexedDB?: IndexedDBOptions;
@@ -60,7 +67,7 @@ const toStorageOptions = <TSnapshot>(
   storage: options.storage,
   serialize: options.serialize,
   deserialize: options.deserialize,
-  sync: options.sync,
+  sync: typeof options.sync === "boolean" ? options.sync : undefined,
   cookie: options.cookie,
   cookieContext: options.cookieContext,
   indexedDB: options.indexedDB,
@@ -88,7 +95,18 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
     let hasPendingHydrationChange = false;
     let hasSeenSnapshot = false;
     let persistenceBlocked = false;
+    let isApplyingRemoteSnapshot = false;
+    let revision = 0;
+    let lastAcceptedMessage: Pick<PersistedSyncMessage, "revision" | "source"> = { revision: 0, source: "" };
+    const syncSource = createPersistedSyncSource();
+    const syncTransport =
+      options.sync === "tabs"
+        ? createBroadcastSyncTransport(`@kamod-ch/signals:${options.key}`)
+        : typeof options.sync === "object"
+          ? options.sync
+          : null;
     let stopSync: () => void = () => {};
+    let stopTransport: () => void = () => {};
     let stopPersistEffect: () => void = () => {};
     let stopDisposeEffect: () => void = () => {};
 
@@ -103,11 +121,21 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
         }
 
         options.scope?.set(options.key, snapshot);
+        revision += 1;
         await driver.set(
           options.key,
           serializePersistedValue(snapshot, options, serialize),
           storageOptions as PersistedSignalOptions<unknown>,
         );
+        if (!isApplyingRemoteSnapshot) {
+          syncTransport?.post({
+            key: options.key,
+            source: syncSource,
+            revision,
+            version: options.version,
+            payload: snapshot,
+          });
+        }
         error.value = null;
       } catch (persistError) {
         error.value = persistError;
@@ -185,6 +213,36 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
       }
     };
 
+    const applyRemoteMessage = async (message: PersistedSyncMessage) => {
+      if (message.key !== options.key || message.source === syncSource) {
+        return;
+      }
+
+      if (comparePersistedSyncMessages(message, lastAcceptedMessage) <= 0) {
+        return;
+      }
+
+      try {
+        const remotePayload =
+          message.version === undefined
+            ? message.payload
+            : { __kamod: "signals" as const, v: message.version, data: message.payload };
+        const parsed = await deserializePersistedValueAsync(
+          JSON.stringify(remotePayload),
+          options,
+          (raw) => JSON.parse(raw) as TSnapshot,
+        );
+        lastAcceptedMessage = { revision: message.revision, source: message.source };
+        revision = Math.max(revision, message.revision);
+        isApplyingRemoteSnapshot = true;
+        await applySnapshot(parsed.value);
+      } catch (syncError) {
+        error.value = syncError;
+      } finally {
+        isApplyingRemoteSnapshot = false;
+      }
+    };
+
     const flush = async () => {
       await persistSnapshot(options.select(model));
     };
@@ -202,6 +260,8 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
 
       isDisposed = true;
       stopSync();
+      stopTransport();
+      syncTransport?.dispose();
       stopPersistEffect();
       stopDisposeEffect();
       hydration.value = "idle";
@@ -227,7 +287,13 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
       void persistSnapshot(snapshot);
     });
 
-    if (options.sync !== false && driver.subscribe) {
+    if (syncTransport) {
+      stopTransport = syncTransport.subscribe((message) => {
+        void applyRemoteMessage(message);
+      });
+    }
+
+    if (options.sync !== false && options.sync !== "tabs" && typeof options.sync !== "object" && driver.subscribe) {
       stopSync = driver.subscribe(
         options.key,
         () => {

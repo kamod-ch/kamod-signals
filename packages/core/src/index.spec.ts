@@ -6,6 +6,8 @@ import {
   createCookieContext,
   createModel,
   createPersistedModel,
+  createBroadcastSyncTransport,
+  createMemorySyncTransport,
   createPersistedScope,
   dehydratePersisted,
   effect,
@@ -1044,6 +1046,161 @@ describe("createPersistedModel", () => {
       Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
       Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument });
     }
+  });
+});
+
+describe("cross-tab persisted model sync", () => {
+  it("sends updates between two model instances without echo loops", async () => {
+    const key = `cross-tab-${Date.now()}`;
+    const firstTransport = createMemorySyncTransport<{ theme: "light" | "dark" }>(key);
+    const secondTransport = createMemorySyncTransport<{ theme: "light" | "dark" }>(key);
+    let posts = 0;
+    const countedFirstTransport = {
+      ...firstTransport,
+      post(message: Parameters<typeof firstTransport.post>[0]) {
+        posts += 1;
+        firstTransport.post(message);
+      },
+    };
+    const createSyncedModel = (sync: typeof firstTransport) =>
+      createPersistedModel(
+        {
+          key,
+          storage: "memory",
+          sync,
+          select: (model) => ({ theme: model.theme.value }),
+          apply(model, snapshot: { theme: "light" | "dark" }) {
+            model.theme.value = snapshot.theme;
+          },
+        },
+        () => ({ theme: signal<"light" | "dark">("light") }),
+      );
+    const FirstModel = createSyncedModel(countedFirstTransport);
+    const SecondModel = createSyncedModel(secondTransport);
+    const first = new FirstModel();
+    const second = new SecondModel();
+    await vi.waitFor(() => expect(first.hydration.value).toBe("ready"));
+    await vi.waitFor(() => expect(second.hydration.value).toBe("ready"));
+
+    first.theme.value = "dark";
+
+    await vi.waitFor(() => expect(second.theme.value).toBe("dark"));
+    expect(posts).toBe(1);
+
+    first.dispose();
+    second.dispose();
+  });
+
+  it("propagates updates in both directions", async () => {
+    const key = `cross-tab-${Date.now()}-both`;
+    const FirstModel = createPersistedModel(
+      {
+        key,
+        storage: "memory",
+        sync: createMemorySyncTransport<{ theme: "light" | "dark" }>(key),
+        select: (model) => ({ theme: model.theme.value }),
+        apply(model, snapshot: { theme: "light" | "dark" }) {
+          model.theme.value = snapshot.theme;
+        },
+      },
+      () => ({ theme: signal<"light" | "dark">("light") }),
+    );
+    const SecondModel = createPersistedModel(
+      {
+        key,
+        storage: "memory",
+        sync: createMemorySyncTransport<{ theme: "light" | "dark" }>(key),
+        select: (model) => ({ theme: model.theme.value }),
+        apply(model, snapshot: { theme: "light" | "dark" }) {
+          model.theme.value = snapshot.theme;
+        },
+      },
+      () => ({ theme: signal<"light" | "dark">("light") }),
+    );
+    const first = new FirstModel();
+    const second = new SecondModel();
+    await vi.waitFor(() => expect(first.hydration.value).toBe("ready"));
+    await vi.waitFor(() => expect(second.hydration.value).toBe("ready"));
+
+    first.theme.value = "dark";
+    await vi.waitFor(() => expect(second.theme.value).toBe("dark"));
+    second.theme.value = "light";
+    await vi.waitFor(() => expect(first.theme.value).toBe("light"));
+
+    first.dispose();
+    second.dispose();
+  });
+
+  it("rejects invalid remote payloads and future versions", async () => {
+    const key = `cross-tab-${Date.now()}-reject`;
+    const transport = createMemorySyncTransport<{ theme: "light" | "dark" }>(key);
+    const PreferencesModel = createPersistedModel(
+      {
+        key,
+        storage: "memory",
+        sync: transport,
+        version: 1,
+        validate(snapshot): snapshot is { theme: "light" | "dark" } {
+          return typeof snapshot === "object" && snapshot !== null && (snapshot as { theme?: unknown }).theme === "dark";
+        },
+        select: (model) => ({ theme: model.theme.value }),
+        apply(model, snapshot: { theme: "light" | "dark" }) {
+          model.theme.value = snapshot.theme;
+        },
+      },
+      () => ({ theme: signal<"light" | "dark">("light") }),
+    );
+    const preferences = new PreferencesModel();
+    await vi.waitFor(() => expect(preferences.hydration.value).toBe("ready"));
+
+    transport.post({ key, source: "remote", revision: 1, version: 99, payload: { theme: "dark" } });
+    await vi.waitFor(() => expect(preferences.error.value).toBeTruthy());
+    expect(preferences.theme.value).toBe("light");
+
+    transport.post({ key, source: "remote", revision: 2, version: 1, payload: { theme: "light" } });
+    await Promise.resolve();
+    expect(preferences.theme.value).toBe("light");
+
+    preferences.dispose();
+  });
+
+  it("does not create browser transports without browser globals", () => {
+    const originalWindow = globalThis.window;
+    const originalDocument = globalThis.document;
+    Reflect.deleteProperty(globalThis, "window");
+    Reflect.deleteProperty(globalThis, "document");
+
+    try {
+      expect(createBroadcastSyncTransport("ssr")).toBeNull();
+    } finally {
+      Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+      Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument });
+    }
+  });
+
+  it("disposes transport listeners", async () => {
+    const key = `cross-tab-${Date.now()}-dispose`;
+    const transport = createMemorySyncTransport<{ theme: "light" | "dark" }>(key);
+    const PreferencesModel = createPersistedModel(
+      {
+        key,
+        storage: "memory",
+        sync: transport,
+        select: (model) => ({ theme: model.theme.value }),
+        apply(model, snapshot: { theme: "light" | "dark" }) {
+          model.theme.value = snapshot.theme;
+        },
+      },
+      () => ({ theme: signal<"light" | "dark">("light") }),
+    );
+    const preferences = new PreferencesModel();
+    await vi.waitFor(() => expect(preferences.hydration.value).toBe("ready"));
+    preferences.dispose();
+
+    transport.post({ key, source: "remote", revision: 1, payload: { theme: "dark" } });
+    await Promise.resolve();
+
+    expect(preferences.theme.value).toBe("light");
   });
 });
 

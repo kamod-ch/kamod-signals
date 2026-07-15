@@ -74,6 +74,10 @@ preferences.dispose();       // stop persistence effects and subscriptions
 
 `useModel()` also disposes model effects on component unmount.
 
+## Cross-tab sync
+
+Use `sync: "tabs"` when a persisted model should receive updates from other browser tabs. See [Cross-tab sync](/guide/cross-tab-sync).
+
 ## Versioning and migrations
 
 Pass `version`, `migrate`, and `validate` when the selected snapshot shape changes. Versioned writes use a small envelope and legacy unversioned payloads remain readable as version `0`.

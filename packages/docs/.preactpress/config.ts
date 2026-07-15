@@ -74,6 +74,7 @@ export default defineConfig({
           { text: "Persisted models", link: "/guide/persisted-models" },
           { text: "Versioning and migrations", link: "/guide/versioning-and-migrations" },
           { text: "SSR and hydration", link: "/guide/ssr-and-hydration" },
+          { text: "Cross-tab sync", link: "/guide/cross-tab-sync" },
           { text: "API", link: "/guide/api" },
           { text: "Architecture ADR", link: "/architecture/persisted-signals-state-layer-adr" },
         ],
