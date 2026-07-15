@@ -19,6 +19,16 @@ export type {
   PersistedStorage,
 } from "./types";
 export { createCookieContext, serializeCookie } from "./drivers";
+export {
+  createPersistedEventTarget,
+  emitPersistedEvent,
+  type PersistedEvent,
+  type PersistedEventListener,
+  type PersistedEventOptions,
+  type PersistedEventTarget,
+  type PersistedEventType,
+  type PersistedEventUnsubscribe,
+} from "./events";
 export { createPersistedModel } from "./createPersistedModel";
 export type {
   HydrationStatus,

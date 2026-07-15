@@ -8,6 +8,7 @@ import {
 } from "@preact/signals";
 import { resolveDriver } from "./drivers";
 import { defaultDeserialize, defaultSerialize, resolveStorageType } from "./shared";
+import { emitPersistedEvent, type PersistedEventTarget } from "./events";
 import { consumeHydratedPersistedValue, type PersistedScope } from "./ssr";
 import {
   comparePersistedSyncMessages,
@@ -45,6 +46,8 @@ export interface PersistedModelOptions<TModel extends object, TSnapshot> {
   migrationErrorStrategy?: MigrationErrorStrategy;
   legacyVersion?: number;
   scope?: PersistedScope;
+  events?: PersistedEventTarget<TSnapshot>;
+  includeEventSnapshots?: boolean;
 }
 
 export interface PersistedModelControls {
@@ -110,6 +113,9 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
     let stopPersistEffect: () => void = () => {};
     let stopDisposeEffect: () => void = () => {};
 
+    const eventBase = () => ({ key: options.key, storage });
+    const eventSnapshot = (snapshot: TSnapshot) => options.includeEventSnapshots ? snapshot : undefined;
+
     const persistSnapshot = async (snapshot: TSnapshot) => {
       if (isDisposed) {
         return;
@@ -120,6 +126,7 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
           return;
         }
 
+        emitPersistedEvent(options.events, { ...eventBase(), type: "persist:start", snapshot: eventSnapshot(snapshot) });
         options.scope?.set(options.key, snapshot);
         revision += 1;
         await driver.set(
@@ -137,8 +144,10 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
           });
         }
         error.value = null;
+        emitPersistedEvent(options.events, { ...eventBase(), type: "persist:success", snapshot: eventSnapshot(snapshot) });
       } catch (persistError) {
         error.value = persistError;
+        emitPersistedEvent(options.events, { ...eventBase(), type: "persist:error", error: persistError });
       }
     };
 
@@ -168,15 +177,18 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
         persistenceBlocked = false;
         await applySnapshot(parsed.value);
         if (parsed.migrated) {
+          emitPersistedEvent(options.events, { ...eventBase(), type: "migrate:success", snapshot: eventSnapshot(parsed.value) });
           await persistSnapshot(parsed.value);
         }
       } catch (deserializeError) {
         if (options.migrationErrorStrategy === "throw") {
+          emitPersistedEvent(options.events, { ...eventBase(), type: "migrate:error", error: deserializeError });
           throw deserializeError;
         }
         persistenceBlocked =
           deserializeError instanceof FuturePersistedVersionError || options.migrationErrorStrategy !== "reset";
         error.value = deserializeError;
+        emitPersistedEvent(options.events, { ...eventBase(), type: "migrate:error", error: deserializeError });
       }
     };
 
@@ -188,21 +200,25 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
       isHydrating = true;
       hydration.value = "loading";
       error.value = null;
+      emitPersistedEvent(options.events, { ...eventBase(), type: "hydrate:start" });
 
       try {
         if (hydratedSnapshot !== undefined) {
           await applySnapshot(hydratedSnapshot);
           options.scope?.set(options.key, hydratedSnapshot);
           hydration.value = "ready";
+          emitPersistedEvent(options.events, { ...eventBase(), type: "hydrate:success", snapshot: eventSnapshot(hydratedSnapshot) });
         } else {
           const raw = await driver.get(options.key, storageOptions as PersistedSignalOptions<unknown>);
           await applyRaw(raw);
           options.scope?.set(options.key, options.select(model));
           hydration.value = "ready";
+          emitPersistedEvent(options.events, { ...eventBase(), type: "hydrate:success", snapshot: eventSnapshot(options.select(model)) });
         }
       } catch (hydrateError) {
         error.value = hydrateError;
         hydration.value = "error";
+        emitPersistedEvent(options.events, { ...eventBase(), type: "hydrate:error", error: hydrateError });
       } finally {
         isHydrating = false;
       }
@@ -218,7 +234,10 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
         return;
       }
 
+      emitPersistedEvent(options.events, { ...eventBase(), type: "sync:receive", metadata: { source: message.source, revision: message.revision } });
+
       if (comparePersistedSyncMessages(message, lastAcceptedMessage) <= 0) {
+        emitPersistedEvent(options.events, { ...eventBase(), type: "sync:reject", metadata: { reason: "stale", source: message.source, revision: message.revision } });
         return;
       }
 
@@ -238,6 +257,7 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
         await applySnapshot(parsed.value);
       } catch (syncError) {
         error.value = syncError;
+        emitPersistedEvent(options.events, { ...eventBase(), type: "sync:reject", error: syncError, metadata: { source: message.source, revision: message.revision } });
       } finally {
         isApplyingRemoteSnapshot = false;
       }
@@ -249,6 +269,7 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
 
     const reset = async () => {
       persistenceBlocked = false;
+      emitPersistedEvent(options.events, { ...eventBase(), type: "reset" });
       await applySnapshot(initialSnapshot);
       await flush();
     };
@@ -259,6 +280,7 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
       }
 
       isDisposed = true;
+      emitPersistedEvent(options.events, { ...eventBase(), type: "dispose" });
       stopSync();
       stopTransport();
       syncTransport?.dispose();

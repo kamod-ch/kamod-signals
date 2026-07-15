@@ -8,6 +8,7 @@ import {
   createPersistedModel,
   createBroadcastSyncTransport,
   createMemorySyncTransport,
+  createPersistedEventTarget,
   createPersistedScope,
   dehydratePersisted,
   effect,
@@ -20,6 +21,7 @@ import {
   type Model,
   type ModelConstructor,
 } from ".";
+import { createPersistedDevLogger } from "./devtools";
 import { __private__ } from "./persistedSignal";
 import type { PersistedSignal, PersistedSignalOptions } from "./types";
 
@@ -1046,6 +1048,119 @@ describe("createPersistedModel", () => {
       Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
       Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument });
     }
+  });
+});
+
+describe("persisted lifecycle events and dev logger", () => {
+  it("emits hydrate, persist, reset, and dispose events with redacted snapshots", async () => {
+    const key = `events-${Date.now()}`;
+    const events = createPersistedEventTarget<{ theme: "light" | "dark" }>();
+    const received: string[] = [];
+    const snapshots: unknown[] = [];
+    const unsubscribe = events.subscribe((event) => {
+      received.push(event.type);
+      snapshots.push(event.snapshot);
+    });
+    const PreferencesModel = createPersistedModel(
+      {
+        key,
+        storage: "memory",
+        events,
+        select: (model) => ({ theme: model.theme.value }),
+        apply(model, snapshot: { theme: "light" | "dark" }) {
+          model.theme.value = snapshot.theme;
+        },
+      },
+      () => ({ theme: signal<"light" | "dark">("light") }),
+    );
+
+    const preferences = new PreferencesModel();
+    await vi.waitFor(() => expect(preferences.hydration.value).toBe("ready"));
+    preferences.theme.value = "dark";
+    await vi.waitFor(() => expect(received).toContain("persist:success"));
+    await preferences.reset();
+    preferences.dispose();
+    unsubscribe();
+
+    expect(received).toEqual(expect.arrayContaining(["hydrate:start", "hydrate:success", "persist:start", "persist:success", "reset", "dispose"]));
+    expect(snapshots.filter(Boolean).every((snapshot) => snapshot === "[redacted]")).toBe(true);
+  });
+
+  it("keeps listener errors isolated and supports unsubscribe", async () => {
+    const key = `events-${Date.now()}-listener`;
+    const listenerErrors: unknown[] = [];
+    const events = createPersistedEventTarget<{ theme: "light" | "dark" }>({ onListenerError: (error) => listenerErrors.push(error) });
+    const received: string[] = [];
+    const unsubscribeThrowing = events.subscribe(() => {
+      throw new Error("listener failed");
+    });
+    const unsubscribe = events.subscribe((event) => received.push(event.type));
+    unsubscribe();
+    const PreferencesModel = createPersistedModel(
+      {
+        key,
+        storage: "memory",
+        events,
+        select: (model) => ({ theme: model.theme.value }),
+        apply(model, snapshot: { theme: "light" | "dark" }) {
+          model.theme.value = snapshot.theme;
+        },
+      },
+      () => ({ theme: signal<"light" | "dark">("light") }),
+    );
+
+    const preferences = new PreferencesModel();
+    await vi.waitFor(() => expect(preferences.hydration.value).toBe("ready"));
+    preferences.dispose();
+    unsubscribeThrowing();
+
+    expect(listenerErrors.length).toBeGreaterThan(0);
+    expect(received).toEqual([]);
+  });
+
+  it("emits error and sync reject events", async () => {
+    const key = `events-${Date.now()}-error`;
+    const events = createPersistedEventTarget<{ theme: "light" | "dark" }>();
+    const received: string[] = [];
+    events.subscribe((event) => received.push(event.type));
+    const transport = createMemorySyncTransport<{ theme: "light" | "dark" }>(key);
+    const PreferencesModel = createPersistedModel(
+      {
+        key,
+        storage: "memory",
+        sync: transport,
+        version: 1,
+        events,
+        validate: (snapshot): snapshot is { theme: "light" | "dark" } =>
+          typeof snapshot === "object" && snapshot !== null && (snapshot as { theme?: unknown }).theme === "dark",
+        select: (model) => ({ theme: model.theme.value }),
+        apply(model, snapshot: { theme: "light" | "dark" }) {
+          model.theme.value = snapshot.theme;
+        },
+      },
+      () => ({ theme: signal<"light" | "dark">("light") }),
+    );
+
+    const preferences = new PreferencesModel();
+    await vi.waitFor(() => expect(preferences.hydration.value).toBe("ready"));
+    transport.post({ key, source: "remote", revision: 1, version: 99, payload: { theme: "dark" } });
+    await vi.waitFor(() => expect(received).toContain("sync:reject"));
+    preferences.dispose();
+  });
+
+  it("logs in development and stays silent in production", () => {
+    const debug = vi.fn();
+    const error = vi.fn();
+    const devLogger = createPersistedDevLogger({ enabled: true, console: { debug, error } });
+    devLogger.emit({ type: "persist:success", key: "demo", timestamp: Date.now(), snapshot: { secret: "hidden" } });
+    expect(debug).toHaveBeenCalledOnce();
+    expect(debug.mock.calls[0][2].snapshot).toBe("[redacted]");
+
+    const prodLogger = createPersistedDevLogger({ enabled: false, console: { debug, error } });
+    prodLogger.emit({ type: "persist:error", key: "demo", timestamp: Date.now(), error: new Error("x") });
+    expect(error).not.toHaveBeenCalled();
+    devLogger.dispose();
+    prodLogger.dispose();
   });
 });
 

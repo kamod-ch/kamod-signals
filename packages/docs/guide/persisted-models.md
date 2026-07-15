@@ -84,6 +84,10 @@ Pass `version`, `migrate`, and `validate` when the selected snapshot shape chang
 
 See [Versioning and migrations](/guide/versioning-and-migrations) for details and downgrade behavior.
 
+## Lifecycle events
+
+Pass an `events` target to observe hydration, persistence, migration, sync, reset, and dispose events. See [Lifecycle and devtools](/guide/lifecycle-and-devtools).
+
 ## Error handling
 
 Persistence errors are captured in `model.error` and do not create unhandled promise rejections during automatic hydration or persistence.
