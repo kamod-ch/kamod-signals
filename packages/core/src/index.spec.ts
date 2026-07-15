@@ -6,9 +6,13 @@ import {
   createCookieContext,
   createModel,
   createPersistedModel,
+  createPersistedScope,
+  dehydratePersisted,
   effect,
+  hydratePersisted,
   persistedSignal,
   signal,
+  serializePersistedStateForHtml,
   useModel,
   usePersistedSignal,
   type Model,
@@ -1040,6 +1044,120 @@ describe("createPersistedModel", () => {
       Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
       Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument });
     }
+  });
+});
+
+describe("SSR persisted scopes and hydration", () => {
+  beforeEach(() => {
+    __private__.globalRegistry.clear();
+  });
+
+  it("isolates two server request scopes", async () => {
+    const firstScope = createPersistedScope();
+    const secondScope = createPersistedScope();
+    const FirstModel = createPersistedModel(
+      {
+        key: "preferences",
+        storage: "memory",
+        scope: firstScope,
+        select: (model) => ({ theme: model.theme.value }),
+        apply(model, snapshot: { theme: "light" | "dark" }) {
+          model.theme.value = snapshot.theme;
+        },
+      },
+      () => ({ theme: signal<"light" | "dark">("light") }),
+    );
+    const SecondModel = createPersistedModel(
+      {
+        key: "preferences",
+        storage: "memory",
+        scope: secondScope,
+        select: (model) => ({ theme: model.theme.value }),
+        apply(model, snapshot: { theme: "light" | "dark" }) {
+          model.theme.value = snapshot.theme;
+        },
+      },
+      () => ({ theme: signal<"light" | "dark">("light") }),
+    );
+
+    const first = new FirstModel();
+    const second = new SecondModel();
+    await vi.waitFor(() => expect(first.hydration.value).toBe("ready"));
+    await vi.waitFor(() => expect(second.hydration.value).toBe("ready"));
+
+    first.theme.value = "dark";
+    second.theme.value = "light";
+    await Promise.resolve();
+
+    expect(dehydratePersisted(firstScope)).toEqual({ preferences: { theme: "dark" } });
+    expect(dehydratePersisted(secondScope)).toEqual({ preferences: { theme: "light" } });
+
+    first.dispose();
+    second.dispose();
+    firstScope.dispose();
+    secondScope.dispose();
+  });
+
+  it("hydrates client state before storage defaults can overwrite it", async () => {
+    const key = `ssr-hydrate-${Date.now()}`;
+    await __private__.drivers.memory.set(key, JSON.stringify({ theme: "light" }), { storage: "memory" });
+    hydratePersisted({ [key]: { theme: "dark" } });
+    const PreferencesModel = createPersistedModel(
+      {
+        key,
+        storage: "memory",
+        select: (model) => ({ theme: model.theme.value }),
+        apply(model, snapshot: { theme: "light" | "dark" }) {
+          model.theme.value = snapshot.theme;
+        },
+      },
+      () => ({ theme: signal<"light" | "dark">("light") }),
+    );
+
+    const preferences = new PreferencesModel();
+    await vi.waitFor(() => expect(preferences.hydration.value).toBe("ready"));
+
+    expect(preferences.theme.value).toBe("dark");
+    preferences.dispose();
+  });
+
+  it("hydrates persisted signals from a client snapshot", () => {
+    const key = `ssr-signal-${Date.now()}`;
+    localStorage.setItem(key, JSON.stringify("light"));
+    hydratePersisted({ [key]: "dark" });
+
+    const theme = persistedSignal(key, "light", { storage: "local" });
+
+    expect(theme.value).toBe("dark");
+  });
+
+  it("escapes dehydrated state for safe HTML embedding", () => {
+    const serialized = serializePersistedStateForHtml({ value: "</script><script>alert(1)</script>&\u2028" });
+
+    expect(serialized).not.toContain("</script>");
+    expect(serialized).toContain("\\u003C/script\\u003E");
+    expect(serialized).toContain("\\u0026");
+  });
+
+  it("keeps cookie request contexts isolated inside scopes", () => {
+    const firstContext = createCookieContext({ cookie: 'theme=%22dark%22' });
+    const secondContext = createCookieContext({ cookie: 'theme=%22light%22' });
+    const firstScope = createPersistedScope({ cookieContext: firstContext });
+    const secondScope = createPersistedScope({ cookieContext: secondContext });
+
+    const first = persistedSignal("theme", "fallback", {
+      storage: "cookie",
+      cookieContext: firstScope.cookieContext,
+      scope: firstScope,
+    });
+    const second = persistedSignal("theme", "fallback", {
+      storage: "cookie",
+      cookieContext: secondScope.cookieContext,
+      scope: secondScope,
+    });
+
+    expect(first.value).toBe("dark");
+    expect(second.value).toBe("light");
   });
 });
 

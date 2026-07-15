@@ -8,6 +8,7 @@ import {
 } from "@preact/signals";
 import { resolveDriver } from "./drivers";
 import { defaultDeserialize, defaultSerialize, resolveStorageType } from "./shared";
+import { consumeHydratedPersistedValue, type PersistedScope } from "./ssr";
 import type { CookieContext, CookieOptions, IndexedDBOptions, PersistedSignalOptions, PersistedStorage } from "./types";
 import {
   FuturePersistedVersionError,
@@ -36,6 +37,7 @@ export interface PersistedModelOptions<TModel extends object, TSnapshot> {
   validate?: (snapshot: unknown) => snapshot is TSnapshot;
   migrationErrorStrategy?: MigrationErrorStrategy;
   legacyVersion?: number;
+  scope?: PersistedScope;
 }
 
 export interface PersistedModelControls {
@@ -78,6 +80,8 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
     const hydration = signal<HydrationStatus>("idle");
     const error = signal<unknown | null>(null);
     const initialSnapshot = options.select(model);
+    const scopedSnapshot = options.scope?.get<TSnapshot>(options.key);
+    const hydratedSnapshot = scopedSnapshot ?? consumeHydratedPersistedValue<TSnapshot>(options.key);
     let isHydrating = true;
     let isApplyingSnapshot = false;
     let isDisposed = false;
@@ -98,6 +102,7 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
           return;
         }
 
+        options.scope?.set(options.key, snapshot);
         await driver.set(
           options.key,
           serializePersistedValue(snapshot, options, serialize),
@@ -157,9 +162,16 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
       error.value = null;
 
       try {
-        const raw = await driver.get(options.key, storageOptions as PersistedSignalOptions<unknown>);
-        await applyRaw(raw);
-        hydration.value = "ready";
+        if (hydratedSnapshot !== undefined) {
+          await applySnapshot(hydratedSnapshot);
+          options.scope?.set(options.key, hydratedSnapshot);
+          hydration.value = "ready";
+        } else {
+          const raw = await driver.get(options.key, storageOptions as PersistedSignalOptions<unknown>);
+          await applyRaw(raw);
+          options.scope?.set(options.key, options.select(model));
+          hydration.value = "ready";
+        }
       } catch (hydrateError) {
         error.value = hydrateError;
         hydration.value = "error";

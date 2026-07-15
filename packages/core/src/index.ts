@@ -29,6 +29,15 @@ export type {
 } from "./createPersistedModel";
 export { persistedSignal } from "./persistedSignal";
 export {
+  createPersistedScope,
+  dehydratePersisted,
+  hydratePersisted,
+  serializePersistedStateForHtml,
+  type PersistedDehydratedState,
+  type PersistedScope,
+  type PersistedScopeOptions,
+} from "./ssr";
+export {
   FuturePersistedVersionError,
   PersistedValidationError,
   isPersistedEnvelope,

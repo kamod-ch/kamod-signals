@@ -15,11 +15,16 @@ A quick reference for the main functions, options, and runtime behavior.
 persistedSignal<T>(key: string, initialValue: T, options?: PersistedSignalOptions<T>): PersistedSignal<T>
 usePersistedSignal<T>(key: string, initialValue: T, options?: PersistedSignalOptions<T>): PersistedSignal<T>
 createPersistedModel<TModel, TSnapshot, TArgs>(options, factory): ModelConstructor<TModel & PersistedModelControls, TArgs>
+createPersistedScope(options?): PersistedScope
+dehydratePersisted(scope): PersistedDehydratedState
+hydratePersisted(state): void
+serializePersistedStateForHtml(state): string
 ```
 
 - Use `persistedSignal()` for shared signals across modules.
 - Use `usePersistedSignal()` inside components.
 - Use `createPersistedModel()` for a typed, explicitly selected persisted snapshot of a Preact Signals model.
+- Use persisted scopes to isolate SSR requests and dehydrate/hydrate state safely.
 
 ## Quick examples
 
@@ -47,6 +52,7 @@ type PersistedSignalOptions<T> = {
   validate?: (snapshot: unknown) => snapshot is T;
   migrationErrorStrategy?: "preserve" | "reset" | "throw";
   legacyVersion?: number;
+  scope?: PersistedScope;
   cookie?: {
     expires?: number | Date;
     path?: string;
@@ -68,6 +74,7 @@ type PersistedSignalOptions<T> = {
 | `removeOnUndefined` | remove persisted value when signal becomes `undefined` | optional values |
 | `indexedDB` | IndexedDB-specific settings | multi-db or multi-store setups |
 | `version` / `migrate` / `validate` | evolve persisted payloads safely | schema changes |
+| `scope` | request-local SSR collection and hydration | Preact SSR, Hono, edge runtimes |
 | `cookie` | cookie-specific settings | SSR-visible values |
 | `cookieContext` | server-aware cookie access during SSR | Astro, Fresh, middleware, SSR routes |
 
@@ -143,5 +150,6 @@ See [Models and actions](/guide/models-and-actions), [Persisted models](/guide/p
 - [Models and actions](/guide/models-and-actions)
 - [Persisted models](/guide/persisted-models)
 - [Versioning and migrations](/guide/versioning-and-migrations)
+- [SSR and hydration](/guide/ssr-and-hydration)
 - [Storage showcase](/examples/storage-showcase)
 - [Cookie SSR](/examples/cookie-ssr)

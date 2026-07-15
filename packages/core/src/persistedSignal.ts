@@ -7,6 +7,7 @@ import {
   resolveStorageType,
   type PersistedSignalController,
 } from "./shared";
+import { consumeHydratedPersistedValue } from "./ssr";
 import type { CookieOptions, PersistedSignal, PersistedSignalOptions, PersistedStorage } from "./types";
 import {
   FuturePersistedVersionError,
@@ -84,6 +85,16 @@ const readInitialValue = <T>(
   options: PersistedSignalOptions<T>,
   driver = resolveDriver(resolveStorageType(options.storage), options as PersistedSignalOptions<unknown>),
 ): T => {
+  const scopedSnapshot = options.scope?.get<T>(key);
+  if (scopedSnapshot !== undefined) {
+    return scopedSnapshot;
+  }
+
+  const hydratedSnapshot = consumeHydratedPersistedValue<T>(key);
+  if (hydratedSnapshot !== undefined) {
+    return hydratedSnapshot;
+  }
+
   const deserialize = options.deserialize ?? defaultDeserialize<T>;
   const raw = driver.get(key, options as PersistedSignalOptions<unknown>);
 
@@ -176,6 +187,7 @@ const createController = <T>(
         return driver.remove(key, options as PersistedSignalOptions<unknown>);
       }
 
+      options.scope?.set(key, value);
       return driver.set(
         key,
         value === undefined ? UNDEFINED_TOKEN : serializePersistedValue(value, options, serialize),
@@ -205,6 +217,7 @@ const createController = <T>(
     persistenceBlocked = false;
     isApplyingExternalValue = true;
     driver.remove(key, options as PersistedSignalOptions<unknown>);
+    options.scope?.set(key, initialValue);
     state.value = initialValue;
     observedValue = state.value;
     isApplyingExternalValue = false;
