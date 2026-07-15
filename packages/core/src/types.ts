@@ -1,4 +1,5 @@
 import type { Signal } from "@preact/signals";
+import type { MaybePromise, MigrationErrorStrategy } from "./versioning";
 
 export type PersistedStorage = "local" | "session" | "cookie" | "memory" | "indexeddb";
 
@@ -33,6 +34,11 @@ export interface PersistedSignalOptions<T> {
   cookie?: CookieOptions;
   cookieContext?: CookieContext;
   indexedDB?: IndexedDBOptions;
+  version?: number;
+  migrate?: (snapshot: unknown, fromVersion: number) => MaybePromise<T>;
+  validate?: (snapshot: unknown) => snapshot is T;
+  migrationErrorStrategy?: MigrationErrorStrategy;
+  legacyVersion?: number;
 }
 
 export interface PersistedSignal<T> extends Signal<T> {

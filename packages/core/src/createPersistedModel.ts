@@ -9,9 +9,16 @@ import {
 import { resolveDriver } from "./drivers";
 import { defaultDeserialize, defaultSerialize, resolveStorageType } from "./shared";
 import type { CookieContext, CookieOptions, IndexedDBOptions, PersistedSignalOptions, PersistedStorage } from "./types";
+import {
+  FuturePersistedVersionError,
+  type MaybePromise,
+  type MigrationErrorStrategy,
+  deserializePersistedValueAsync,
+  serializePersistedValue,
+} from "./versioning";
 
 export type HydrationStatus = "idle" | "loading" | "ready" | "error";
-export type MaybePromise<T> = T | Promise<T>;
+export type { MaybePromise } from "./versioning";
 
 export interface PersistedModelOptions<TModel extends object, TSnapshot> {
   key: string;
@@ -24,6 +31,11 @@ export interface PersistedModelOptions<TModel extends object, TSnapshot> {
   cookie?: CookieOptions;
   cookieContext?: CookieContext;
   indexedDB?: IndexedDBOptions;
+  version?: number;
+  migrate?: (snapshot: unknown, fromVersion: number) => MaybePromise<TSnapshot>;
+  validate?: (snapshot: unknown) => snapshot is TSnapshot;
+  migrationErrorStrategy?: MigrationErrorStrategy;
+  legacyVersion?: number;
 }
 
 export interface PersistedModelControls {
@@ -71,6 +83,7 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
     let isDisposed = false;
     let hasPendingHydrationChange = false;
     let hasSeenSnapshot = false;
+    let persistenceBlocked = false;
     let stopSync: () => void = () => {};
     let stopPersistEffect: () => void = () => {};
     let stopDisposeEffect: () => void = () => {};
@@ -81,7 +94,15 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
       }
 
       try {
-        await driver.set(options.key, serialize(snapshot), storageOptions as PersistedSignalOptions<unknown>);
+        if (persistenceBlocked) {
+          return;
+        }
+
+        await driver.set(
+          options.key,
+          serializePersistedValue(snapshot, options, serialize),
+          storageOptions as PersistedSignalOptions<unknown>,
+        );
         error.value = null;
       } catch (persistError) {
         error.value = persistError;
@@ -110,8 +131,18 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
       }
 
       try {
-        await applySnapshot(deserialize(raw));
+        const parsed = await deserializePersistedValueAsync(raw, options, deserialize);
+        persistenceBlocked = false;
+        await applySnapshot(parsed.value);
+        if (parsed.migrated) {
+          await persistSnapshot(parsed.value);
+        }
       } catch (deserializeError) {
+        if (options.migrationErrorStrategy === "throw") {
+          throw deserializeError;
+        }
+        persistenceBlocked =
+          deserializeError instanceof FuturePersistedVersionError || options.migrationErrorStrategy !== "reset";
         error.value = deserializeError;
       }
     };
@@ -147,6 +178,7 @@ export const createPersistedModel = <TModel extends object, TSnapshot, TArgs ext
     };
 
     const reset = async () => {
+      persistenceBlocked = false;
       await applySnapshot(initialSnapshot);
       await flush();
     };

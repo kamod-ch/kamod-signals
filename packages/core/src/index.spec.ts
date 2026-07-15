@@ -461,6 +461,40 @@ describe("persistedSignal", () => {
     ).toThrow(/indexeddb:indexeddb-conflict.*conflicting options/i);
   });
 
+  it("supports versioned signal migration and future-version preservation", () => {
+    const migratedKey = `signal-version-${Date.now()}-migrate`;
+    const futureKey = `signal-version-${Date.now()}-future`;
+    localStorage.setItem(migratedKey, JSON.stringify("dark"));
+    const futureRaw = JSON.stringify({ __kamod: "signals", v: 99, data: "dark" });
+    localStorage.setItem(futureKey, futureRaw);
+
+    const migrated = persistedSignal(migratedKey, "light", {
+      storage: "local",
+      version: 2,
+      migrate(snapshot, fromVersion) {
+        expect(fromVersion).toBe(0);
+        return snapshot === "dark" ? "solarized" : "light";
+      },
+      validate: (snapshot): snapshot is string => typeof snapshot === "string",
+    });
+    const future = persistedSignal(futureKey, "light", {
+      storage: "local",
+      version: 2,
+      validate: (snapshot): snapshot is string => typeof snapshot === "string",
+    });
+
+    expect(migrated.value).toBe("solarized");
+    expect(JSON.parse(localStorage.getItem(migratedKey) ?? "null")).toEqual({
+      __kamod: "signals",
+      v: 2,
+      data: "solarized",
+    });
+
+    expect(future.value).toBe("light");
+    future.value = "solarized";
+    expect(localStorage.getItem(futureKey)).toBe(futureRaw);
+  });
+
   it("hydrates from indexeddb asynchronously", async () => {
     const database = `signals-test-${Date.now()}-hydrate`;
     const seeded = __private__.createController("theme", "light", {
@@ -724,6 +758,127 @@ describe("createPersistedModel", () => {
     expect(preferences.isDark.value).toBe(true);
 
     preferences.dispose();
+  });
+
+  it("migrates a legacy model payload to the current envelope once", async () => {
+    const key = `persisted-model-${Date.now()}-legacy-migrate`;
+    await __private__.drivers.memory.set(key, JSON.stringify({ theme: "dark" }), { storage: "memory" });
+    const PreferencesModel = createPersistedModel(
+      {
+        key,
+        storage: "memory",
+        version: 2,
+        migrate(snapshot, fromVersion) {
+          expect(fromVersion).toBe(0);
+          return { ...(snapshot as { theme: "light" | "dark" }), density: "comfortable" as const };
+        },
+        validate(snapshot): snapshot is { theme: "light" | "dark"; density: "compact" | "comfortable" } {
+          return typeof snapshot === "object" && snapshot !== null && "theme" in snapshot && "density" in snapshot;
+        },
+        select: (model) => ({ theme: model.theme.value, density: model.density.value }),
+        apply(model, snapshot) {
+          model.theme.value = snapshot.theme;
+          model.density.value = snapshot.density;
+        },
+      },
+      () => ({
+        theme: signal<"light" | "dark">("light"),
+        density: signal<"compact" | "comfortable">("compact"),
+      }),
+    );
+    const preferences = new PreferencesModel();
+
+    await vi.waitFor(() => expect(preferences.hydration.value).toBe("ready"));
+
+    expect(preferences.theme.value).toBe("dark");
+    expect(preferences.density.value).toBe("comfortable");
+    expect(JSON.parse(__private__.drivers.memory.get(key, { storage: "memory" }) as string)).toEqual({
+      __kamod: "signals",
+      v: 2,
+      data: { theme: "dark", density: "comfortable" },
+    });
+
+    preferences.dispose();
+  });
+
+  it("runs asynchronous model migrations", async () => {
+    const key = `persisted-model-${Date.now()}-async-migrate`;
+    await __private__.drivers.memory.set(key, JSON.stringify({ __kamod: "signals", v: 1, data: { theme: "dark" } }), {
+      storage: "memory",
+    });
+    const PreferencesModel = createPersistedModel(
+      {
+        key,
+        storage: "memory",
+        version: 2,
+        async migrate(snapshot) {
+          await Promise.resolve();
+          return { ...(snapshot as { theme: "light" | "dark" }), density: "compact" as const };
+        },
+        select: (model) => ({ theme: model.theme.value, density: model.density.value }),
+        apply(model, snapshot: { theme: "light" | "dark"; density: "compact" | "comfortable" }) {
+          model.theme.value = snapshot.theme;
+          model.density.value = snapshot.density;
+        },
+      },
+      () => ({
+        theme: signal<"light" | "dark">("light"),
+        density: signal<"compact" | "comfortable">("comfortable"),
+      }),
+    );
+    const preferences = new PreferencesModel();
+
+    await vi.waitFor(() => expect(preferences.density.value).toBe("compact"));
+
+    preferences.dispose();
+  });
+
+  it("preserves invalid, failed, and future-version payloads", async () => {
+    const invalidKey = `persisted-model-${Date.now()}-invalid`;
+    const futureKey = `persisted-model-${Date.now()}-future`;
+    const invalidRaw = JSON.stringify({ __kamod: "signals", v: 1, data: { theme: "dark" } });
+    const futureRaw = JSON.stringify({ __kamod: "signals", v: 99, data: { theme: "dark", density: "compact" } });
+    await __private__.drivers.memory.set(invalidKey, invalidRaw, { storage: "memory" });
+    await __private__.drivers.memory.set(futureKey, futureRaw, { storage: "memory" });
+
+    const makeModel = (key: string) =>
+      createPersistedModel(
+        {
+          key,
+          storage: "memory",
+          version: 2,
+          migrate() {
+            throw new Error("boom");
+          },
+          validate(snapshot): snapshot is { theme: "light" | "dark"; density: "compact" | "comfortable" } {
+            return typeof snapshot === "object" && snapshot !== null && "density" in snapshot;
+          },
+          select: (model) => ({ theme: model.theme.value, density: model.density.value }),
+          apply(model, snapshot) {
+            model.theme.value = snapshot.theme;
+            model.density.value = snapshot.density;
+          },
+        },
+        () => ({
+          theme: signal<"light" | "dark">("light"),
+          density: signal<"compact" | "comfortable">("comfortable"),
+        }),
+      );
+
+    const invalid = new (makeModel(invalidKey))();
+    const future = new (makeModel(futureKey))();
+    await vi.waitFor(() => expect(invalid.error.value).toBeTruthy());
+    await vi.waitFor(() => expect(future.error.value).toBeTruthy());
+
+    invalid.theme.value = "dark";
+    future.theme.value = "dark";
+    await Promise.resolve();
+
+    expect(__private__.drivers.memory.get(invalidKey, { storage: "memory" })).toBe(invalidRaw);
+    expect(__private__.drivers.memory.get(futureKey, { storage: "memory" })).toBe(futureRaw);
+
+    invalid.dispose();
+    future.dispose();
   });
 
   it("persists selected state after an action", async () => {

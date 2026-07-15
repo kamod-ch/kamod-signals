@@ -74,6 +74,12 @@ preferences.dispose();       // stop persistence effects and subscriptions
 
 `useModel()` also disposes model effects on component unmount.
 
+## Versioning and migrations
+
+Pass `version`, `migrate`, and `validate` when the selected snapshot shape changes. Versioned writes use a small envelope and legacy unversioned payloads remain readable as version `0`.
+
+See [Versioning and migrations](/guide/versioning-and-migrations) for details and downgrade behavior.
+
 ## Error handling
 
 Persistence errors are captured in `model.error` and do not create unhandled promise rejections during automatic hydration or persistence.

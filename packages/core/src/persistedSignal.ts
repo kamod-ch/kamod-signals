@@ -8,6 +8,12 @@ import {
   type PersistedSignalController,
 } from "./shared";
 import type { CookieOptions, PersistedSignal, PersistedSignalOptions, PersistedStorage } from "./types";
+import {
+  FuturePersistedVersionError,
+  deserializePersistedValue,
+  deserializePersistedValueAsync,
+  serializePersistedValue,
+} from "./versioning";
 
 type NormalizedCookieOptions = {
   expires: string | number | undefined;
@@ -31,6 +37,7 @@ type CompatibilitySnapshot = {
         version: number;
       }
     | undefined;
+  version: number | undefined;
 };
 
 type RegistryEntry = {
@@ -45,19 +52,29 @@ const UNDEFINED_TOKEN = "__KAMOD_SIGNALS_UNDEFINED__";
 const isPromiseLike = <T>(value: unknown): value is Promise<T> =>
   typeof value === "object" && value !== null && "then" in value && typeof value.then === "function";
 
-const parseStoredValue = <T>(raw: string | null, initialValue: T, deserialize: (raw: string) => T): T => {
+const parseStoredValue = <T>(
+  raw: string | null,
+  initialValue: T,
+  options: PersistedSignalOptions<T>,
+  deserialize: (raw: string) => T,
+): { value: T; migrated: boolean; blocked: boolean } => {
   if (raw === null) {
-    return initialValue;
+    return { value: initialValue, migrated: false, blocked: false };
   }
 
   if (raw === UNDEFINED_TOKEN) {
-    return undefined as T;
+    return { value: undefined as T, migrated: false, blocked: false };
   }
 
   try {
-    return deserialize(raw);
-  } catch {
-    return initialValue;
+    const result = deserializePersistedValue(raw, options, deserialize);
+    return { value: result.value, migrated: result.migrated, blocked: false };
+  } catch (error) {
+    if (options.migrationErrorStrategy === "throw") {
+      throw error;
+    }
+
+    return { value: initialValue, migrated: false, blocked: error instanceof FuturePersistedVersionError || options.migrationErrorStrategy !== "reset" };
   }
 };
 
@@ -74,7 +91,7 @@ const readInitialValue = <T>(
     return initialValue;
   }
 
-  return parseStoredValue(raw, initialValue, deserialize);
+  return parseStoredValue(raw, initialValue, options, deserialize).value;
 };
 
 const normalizeCookieOptions = (cookie?: CookieOptions): NormalizedCookieOptions => ({
@@ -103,6 +120,7 @@ const createCompatibilitySnapshot = <T>(options: PersistedSignalOptions<T>): Com
             version: options.indexedDB?.version ?? 1,
           }
         : undefined,
+    version: options.version,
   };
 };
 
@@ -112,6 +130,7 @@ const snapshotsMatch = (left: CompatibilitySnapshot, right: CompatibilitySnapsho
   left.deserialize === right.deserialize &&
   left.sync === right.sync &&
   left.removeOnUndefined === right.removeOnUndefined &&
+  left.version === right.version &&
   JSON.stringify(left.cookie) === JSON.stringify(right.cookie) &&
   JSON.stringify(left.indexedDB) === JSON.stringify(right.indexedDB);
 
@@ -145,16 +164,21 @@ const createController = <T>(
   let isHydrating = Boolean(driver.async);
   let observedValue = state.value;
   let hasPendingHydrationChange = false;
+  let persistenceBlocked = false;
 
   const persistValue = (value: T) => {
     try {
+      if (persistenceBlocked) {
+        return undefined;
+      }
+
       if (value === undefined && removeOnUndefined) {
         return driver.remove(key, options as PersistedSignalOptions<unknown>);
       }
 
       return driver.set(
         key,
-        value === undefined ? UNDEFINED_TOKEN : serialize(value),
+        value === undefined ? UNDEFINED_TOKEN : serializePersistedValue(value, options, serialize),
         options as PersistedSignalOptions<unknown>,
       );
     } catch {
@@ -162,7 +186,23 @@ const createController = <T>(
     }
   };
 
+  if (!driver.async) {
+    try {
+      const raw = driver.get(key, options as PersistedSignalOptions<unknown>);
+      if (!isPromiseLike<string | null>(raw)) {
+        const parsed = parseStoredValue(raw, initialValue, options, deserialize);
+        persistenceBlocked = parsed.blocked;
+        if (parsed.migrated) {
+          persistValue(parsed.value);
+        }
+      }
+    } catch {
+      // keep the already resolved initial value
+    }
+  }
+
   state.clear = () => {
+    persistenceBlocked = false;
     isApplyingExternalValue = true;
     driver.remove(key, options as PersistedSignalOptions<unknown>);
     state.value = initialValue;
@@ -171,6 +211,7 @@ const createController = <T>(
   };
 
   state.reset = () => {
+    persistenceBlocked = false;
     state.value = initialValue;
   };
 
@@ -196,14 +237,27 @@ const createController = <T>(
 
   if (driver.async) {
     Promise.resolve(driver.get(key, options as PersistedSignalOptions<unknown>))
-      .then((raw) => {
+      .then(async (raw) => {
         if (!hasPendingHydrationChange) {
-          const nextValue = parseStoredValue(raw, initialValue, deserialize);
+          const parsed = await deserializePersistedValueAsync(raw ?? "null", options, deserialize).catch((error) => {
+            if (raw === null) {
+              return { value: initialValue, migrated: false };
+            }
+            if (options.migrationErrorStrategy === "throw") {
+              throw error;
+            }
+            persistenceBlocked = error instanceof FuturePersistedVersionError || options.migrationErrorStrategy !== "reset";
+            return { value: initialValue, migrated: false };
+          });
+          const nextValue = raw === null ? initialValue : parsed.value;
           if (!Object.is(nextValue, state.value)) {
             isApplyingExternalValue = true;
             state.value = nextValue;
             observedValue = nextValue;
             isApplyingExternalValue = false;
+          }
+          if (raw !== null && parsed.migrated) {
+            await persistValue(nextValue);
           }
         }
 
@@ -222,7 +276,9 @@ const createController = <T>(
   }
 
   const applyExternalRaw = (raw: string | null) => {
-    const nextValue = parseStoredValue(raw, initialValue, deserialize);
+    const parsed = parseStoredValue(raw, initialValue, options, deserialize);
+    persistenceBlocked = parsed.blocked;
+    const nextValue = parsed.value;
 
     if (Object.is(nextValue, state.value)) {
       return;

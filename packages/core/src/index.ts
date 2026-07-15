@@ -28,4 +28,11 @@ export type {
   PersistedModelOptions,
 } from "./createPersistedModel";
 export { persistedSignal } from "./persistedSignal";
+export {
+  FuturePersistedVersionError,
+  PersistedValidationError,
+  isPersistedEnvelope,
+  type MigrationErrorStrategy,
+  type PersistedEnvelope,
+} from "./versioning";
 export { usePersistedSignal } from "./usePersistedSignal";

@@ -42,6 +42,11 @@ type PersistedSignalOptions<T> = {
     store?: string;
     version?: number;
   };
+  version?: number;
+  migrate?: (snapshot: unknown, fromVersion: number) => T | Promise<T>;
+  validate?: (snapshot: unknown) => snapshot is T;
+  migrationErrorStrategy?: "preserve" | "reset" | "throw";
+  legacyVersion?: number;
   cookie?: {
     expires?: number | Date;
     path?: string;
@@ -62,6 +67,7 @@ type PersistedSignalOptions<T> = {
 | `sync` | keep controllers in sync | disable only when inbound updates are not wanted |
 | `removeOnUndefined` | remove persisted value when signal becomes `undefined` | optional values |
 | `indexedDB` | IndexedDB-specific settings | multi-db or multi-store setups |
+| `version` / `migrate` / `validate` | evolve persisted payloads safely | schema changes |
 | `cookie` | cookie-specific settings | SSR-visible values |
 | `cookieContext` | server-aware cookie access during SSR | Astro, Fresh, middleware, SSR routes |
 
@@ -129,12 +135,13 @@ createModel
 useModel
 ```
 
-See [Models and actions](/guide/models-and-actions) and [Persisted models](/guide/persisted-models).
+See [Models and actions](/guide/models-and-actions), [Persisted models](/guide/persisted-models), and [Versioning and migrations](/guide/versioning-and-migrations).
 
 ## Related pages
 
 - [Getting started](/guide/getting-started)
 - [Models and actions](/guide/models-and-actions)
 - [Persisted models](/guide/persisted-models)
+- [Versioning and migrations](/guide/versioning-and-migrations)
 - [Storage showcase](/examples/storage-showcase)
 - [Cookie SSR](/examples/cookie-ssr)
