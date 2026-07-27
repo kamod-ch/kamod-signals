@@ -1,5 +1,6 @@
 <p align="center">
-  <img src="assets/readme-banner.svg" alt="Kamod Signals" width="304" />
+  <img src=".github/assets/logo-kamod-signals-dark.svg#gh-light-mode-only" alt="Kamod Signals" width="280" />
+  <img src=".github/assets/logo-kamod-signals-light.svg#gh-dark-mode-only" alt="Kamod Signals" width="280" />
 </p>
 
 <p align="center">

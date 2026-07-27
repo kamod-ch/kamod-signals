@@ -1,11 +1,6 @@
 import type { FunctionalComponent } from "preact";
-
-function withBase(base: string, link: string): string {
-  if (/^https?:\/\//.test(link)) return link;
-  const b = base === "/" ? "" : base.replace(/\/$/, "");
-  const l = link.startsWith("/") ? link : `/${link}`;
-  return `${b}${l}`;
-}
+import { KamodMarkLogo } from "@kamod-ch/brand";
+import { withBase } from "@kamod-ch/preactpress/client";
 
 type FooterProps = {
   base: string;
@@ -14,20 +9,7 @@ type FooterProps = {
 const Footer: FunctionalComponent<FooterProps> = ({ base }) => (
   <footer class="kiw-footer">
     <a class="kiw-footer-logo" href="https://www.kamod.ch" target="_blank" rel="noopener noreferrer">
-      <span class="ki-logo__kamod-wrap" aria-hidden="true">
-        <img
-          src={withBase(base, "/kamod-logo-horizontal.svg")}
-          alt="kamod"
-          class="ki-logo__kamod ki-logo__kamod--light"
-          decoding="async"
-        />
-        <img
-          src={withBase(base, "/kamod-logo-horizontal-dark.svg")}
-          alt=""
-          class="ki-logo__kamod ki-logo__kamod--dark"
-          decoding="async"
-        />
-      </span>
+      <KamodMarkLogo base={base} resolveAsset={(path) => withBase(base, path)} />
     </a>
 
     <p class="kiw-footer-copy">

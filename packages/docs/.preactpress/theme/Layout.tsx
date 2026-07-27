@@ -32,7 +32,7 @@ import SidebarNav from "@preactpress-internal/theme-default/SidebarNav.tsx";
 import SocialLinks from "@preactpress-internal/theme-default/SocialLinks.tsx";
 import ThemeToggle from "@preactpress-internal/theme-default/ThemeToggle.tsx";
 import "@preactpress-internal/theme-default/styles.css";
-import "./logo.css";
+import "./site-chrome.css";
 
 function withBase(base: string, link: string): string {
   if (/^https?:\/\//.test(link)) return link
