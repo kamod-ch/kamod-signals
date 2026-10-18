@@ -1,6 +1,6 @@
 {
   "name": "@kamod-ch/signals",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "Persisted Preact signals with localStorage, sessionStorage, IndexedDB, cookie, and memory drivers.",
   "keywords": [
     "preact",
@@ -44,7 +44,7 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && tsc -p tsconfig.build.json",
     "prepublishOnly": "pnpm test && pnpm typecheck && pnpm build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -52,15 +52,15 @@
   },
   "peerDependencies": {
     "@preact/signals": "^2.0.0",
-    "preact": "^10.0.0"
+    "preact": "^11.0.0"
   },
   "devDependencies": {
-    "@preact/signals": "^2.9.2",
-    "@types/node": "^26.1.0",
-    "jsdom": "^29.1.1",
-    "preact": "^10.29.4",
-    "tsup": "^8.5.1",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.10"
+    "@preact/signals": "^2.11.3",
+    "@types/node": "^26.6.5",
+    "jsdom": "^30.1.3",
+    "preact": "^11.0.1",
+    "tsup": "^9.0.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
   }
 }
