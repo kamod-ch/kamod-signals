@@ -15,6 +15,7 @@
     "packages/*"
   ],
   "devDependencies": {
+    "@changesets/cli": "^3.0.3",
     "@kamod-ch/brand": "^0.4.0"
   },
   "scripts": {
@@ -35,6 +36,8 @@
     "brand:readme": "kamod-brand-readme --product Signals --output .github/assets",
     "pack:core": "pnpm --filter @kamod-ch/signals exec npm pack --dry-run",
     "publish:core": "pnpm --filter @kamod-ch/signals publish --access public",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
     "release:check": "pnpm verify",
     "release:publish": "pnpm --filter @kamod-ch/signals publish --access public --provenance --no-git-checks",
     "release": "node ./scripts/release.mjs patch",
